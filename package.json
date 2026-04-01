@@ -1,0 +1,21 @@
+{
+  "name": "whatsapp-agent",
+  "version": "1.0.0",
+  "description": "A local WhatsApp sender agent with a live operational dashboard.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "preview": "node index.js",
+    "dashboard": "node index.js",
+    "blast:now": "node index.js --now",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@google/genai": "^1.47.0",
+    "@supabase/supabase-js": "^2.39.7",
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.23.0"
+  }
+}

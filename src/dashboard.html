@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>WhatsApp Sender Dashboard | لوحة تحكم الواتساب</title>
+    <link rel="stylesheet" href="/dashboard.css" />
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <div>
+                <div class="eyebrow">Local Operations Console | وحدة العمليات الميدانية</div>
+                <h1>WhatsApp Sender Dashboard<br><span style="font-size: 0.6em; color: var(--muted); display: block; margin-top: 10px; font-weight: normal;">لوحة تحكم إرسال الواتساب</span></h1>
+                <p>Live control room for connection health, scheduling, manual runs, QR recovery, and message-preview checks.<br>غرفة تحكم مباشرة لحالة الاتصال، الجدولة، الإرسال اليدوي، استعادة رمز QR، ومعاينة الرسائل.</p>
+            </div>
+            <div class="hero-meta">
+                <span id="hero-whatsapp" class="pill skeleton">WhatsApp loading</span>
+                <span id="hero-health" class="pill skeleton">Health loading</span>
+                <span id="hero-refresh" class="chip skeleton">Waiting for first refresh</span>
+                <span id="hero-url" class="chip skeleton">Dashboard URL loading</span>
+                <span id="hero-app" class="chip skeleton">App status loading</span>
+                <span id="hero-action" class="pill skeleton">Controls readying</span>
+            </div>
+        </section>
+
+        <section class="grid cards">
+            <article class="card"><h2>Connection | الاتصال</h2><span id="whatsapp-pill" class="pill skeleton">Loading</span><div id="whatsapp-status" class="value">...</div><div id="whatsapp-detail" class="muted">Waiting for status</div><div id="whatsapp-foot" class="foot">No session data yet.</div></article>
+            <article class="card"><h2>Contacts | جهات الاتصال</h2><div id="contacts-active" class="value">0</div><div class="muted">Active contacts (نشطة)</div><div id="contacts-foot" class="foot">0 total contacts</div></article>
+            <article class="card"><h2>Today's Logs | سجلات اليوم</h2><div id="logs-total" class="value">0</div><div class="muted">Rows written today (سجلات اليوم)</div><div id="logs-foot" class="foot">0 sent, 0 failed</div></article>
+            <article class="card"><h2>Current Blast | الإرسال الجماعي</h2><span id="blast-pill" class="pill skeleton">Loading</span><div id="blast-progress" class="value">0 / 0</div><div id="blast-detail" class="muted">No blast activity yet (لا يوجد إرسال حالياً)</div><div id="blast-foot" class="foot">Success 0, failed 0</div></article>
+            <article class="card"><h2>Manager Agent | المدير الذكي</h2><span id="manager-pill" class="pill skeleton">Loading</span><div id="manager-status" class="value">...</div><div id="manager-detail" class="muted">Waiting for agent status</div><div id="manager-foot" class="foot">No manager activity yet.</div></article>
+            <article class="card"><h2>Health | حالة النظام</h2><span id="health-pill" class="pill skeleton">Loading</span><div id="health-status" class="value">...</div><div id="health-detail" class="muted">Waiting for diagnostics</div><div id="health-foot" class="foot">No health issues detected yet.</div></article>
+        </section>
+
+        <section class="grid split">
+            <article class="card">
+                <h2>Control Center | مركز التحكم</h2>
+                <div id="controls-state" class="chip">Ready (جاهز)</div>
+                <p class="muted">Local-only actions for the running bot.<br><span style="font-size:0.9em">الإجراءات اليدوية للروبوت المحلي.</span></p>
+                <div class="buttons">
+                    <button id="run-blast" class="primary" type="button">Run Blast (بدء الإرسال)</button>
+                    <button id="refresh-now" type="button">Refresh (تحديث)</button>
+                    <button id="copy-url" type="button">Copy URL (نسخ الرابط)</button>
+                </div>
+                <div class="foot">Manual runs are accepted only from the local machine.</div>
+            </article>
+            <article class="card">
+                <h2>Message Preview | معاينة الرسالة</h2>
+                <div id="template-source" class="chip">Template (القالب)</div>
+                <div class="box"><strong>Template (النص الأساسي)</strong><pre id="template-raw">Loading template...</pre></div>
+                <div class="box"><strong>Rendered Preview (المعاينة النهائية)</strong><pre id="template-rendered">Loading preview...</pre></div>
+                <div id="template-variables" class="foot">Variables loading...</div>
+            </article>
+        </section>
+
+        <section class="grid split">
+            <article class="card">
+                <h2>Scheduler | المشرف الزمني</h2>
+                <span id="scheduler-pill" class="pill skeleton">Loading</span>
+                <div class="kv-grid">
+                    <div class="box"><strong>Send Time (وقت الإرسال)</strong><span id="scheduler-send-time">--:--</span></div>
+                    <div class="box"><strong>Cron (نمط الجدولة)</strong><span id="scheduler-cron" class="code">-</span></div>
+                    <div class="box"><strong>Next Run (التشغيل القادم)</strong><span id="scheduler-next-run">Unknown</span></div>
+                    <div class="box"><strong>Last Trigger (آخر تشغيل)</strong><span id="scheduler-last-run">None yet</span></div>
+                </div>
+            </article>
+            <article class="card">
+                <h2>Runtime Config | إعدادات التشغيل</h2>
+                <div class="kv-grid">
+                    <div class="box"><strong>Timezone (المنطقة الزمنية)</strong><span id="config-timezone">-</span></div>
+                    <div class="box"><strong>Range (حجم الإرسال)</strong><span id="config-range">0-0</span></div>
+                    <div class="box"><strong>Delay (الหน่วง)</strong><span id="config-delay">0-0s</span></div>
+                    <div class="box"><strong>Browser (المتصفح)</strong><span id="config-browser">-</span></div>
+                    <div class="box"><strong>Session Path (مسار الجلسة)</strong><span id="config-session" class="code">-</span></div>
+                    <div class="box"><strong>Uptime (مدة التشغيل)</strong><span id="config-uptime">0s</span></div>
+                </div>
+            </article>
+        </section>
+
+        <section class="grid split">
+            <article class="card">
+                <h2>Scan QR If Needed | مسح الكود عند الحاجة</h2>
+                <div class="qr-grid">
+                    <div id="qr-slot" class="empty">If the session expires, the login QR will appear here automatically.<br>(سيظهر رمز الدخول هنا تلقائياً عند الحاجة)</div>
+                    <div>
+                        <div id="qr-title" class="value small">Session connected</div>
+                        <div id="qr-detail" class="muted">The dashboard will switch to scan mode whenever WhatsApp requests a new QR.</div>
+                        <div id="qr-foot" class="foot">No QR currently required.</div>
+                    </div>
+                </div>
+            </article>
+            <article class="card">
+                <h2>Health Issues | مشاكل النظام</h2>
+                <div id="issues-count" class="chip">0 issues</div>
+                <div id="issues" class="list"></div>
+            </article>
+        </section>
+
+        <section class="grid split">
+            <article class="card">
+                <h2>Recent Activity | النشاط الأخير</h2>
+                <div id="events" class="list"></div>
+            </article>
+            <article class="card">
+                <h2>Recent Message Logs | سجل الرسائل الحديثة</h2>
+                <div id="logs-refresh" class="chip">Auto-refreshing (تحديث تلقائي)</div>
+                <div id="recent-logs" class="list"></div>
+                <div id="data-errors" class="errors" hidden></div>
+            </article>
+        </section>
+    </main>
+    <script src="/dashboard.js"></script>
+</body>
+</html>

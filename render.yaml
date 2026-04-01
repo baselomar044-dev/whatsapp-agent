@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: whatsapp-agent
+    env: docker
+    dockerfilePath: Dockerfile
+    # We must map a persistent disk so your QR code login is saved permanently
+    disk:
+      name: bot-session-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: DASHBOARD_PORT
+        value: 3000
+      - key: WHATSAPP_SESSION_PATH
+        value: /app/data/session
+      - key: MANAGER_STORAGE_PATH
+        value: /app/data/storage
+      # Render will prompt you to enter these securely in their dashboard:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: DASHBOARD_PASSWORD
+        sync: false
