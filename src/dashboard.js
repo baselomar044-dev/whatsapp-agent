@@ -30,6 +30,7 @@ let dashboardHtml = fs.readFileSync(path.join(__dirname, 'dashboard.html'), 'utf
 const dashboardCss = fs.readFileSync(path.join(__dirname, 'dashboard.css'), 'utf8');
 const dashboardClientJs = fs.readFileSync(path.join(__dirname, 'dashboard-client.js'), 'utf8');
 const xlsxLibJs = fs.readFileSync(path.join(__dirname, '..', 'node_modules', 'xlsx', 'dist', 'xlsx.full.min.js'), 'utf8');
+const logoBuffer = fs.existsSync(path.join(__dirname, 'logo.png')) ? fs.readFileSync(path.join(__dirname, 'logo.png')) : null;
 
 function getDashboardConfig() {
     return toPublicDashboardConfig(appConfig);
@@ -380,6 +381,25 @@ function startDashboardServer(deps = {}) {
                 }
 
                 sendText(response, 200, xlsxLibJs, 'application/javascript; charset=utf-8');
+                return;
+            }
+
+            if (pathname === '/logo.png') {
+                if (request.method !== 'GET') {
+                    sendMethodNotAllowed(response);
+                    return;
+                }
+
+                if (logoBuffer) {
+                    response.writeHead(200, {
+                        'Content-Type': 'image/png',
+                        'Content-Length': logoBuffer.length,
+                        'Cache-Control': 'public, max-age=86400'
+                    });
+                    response.end(logoBuffer);
+                } else {
+                    sendJson(response, 404, { error: 'Logo not found' });
+                }
                 return;
             }
 

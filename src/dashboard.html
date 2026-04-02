@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="/dashboard.css" />
 </head>
 <body class="lang-en">
+    <div class="watermark-logo" aria-hidden="true"></div>
     <main class="dashboard-shell">
         <header class="page-header">
             <div>
@@ -624,16 +625,16 @@
                         <label class="modal-label">
                             <span class="t-en">Portfolio File</span><span class="t-ar">ملف البورتفوليو</span>
                         </label>
-                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-                            <label class="primary-button" style="cursor:pointer;margin:0">
+                        <div class="portfolio-upload-row">
+                            <label class="primary-button portfolio-upload-label">
                                 <span class="t-en">📎 Choose File</span><span class="t-ar">📎 اختر ملف</span>
-                                <input id="fset-portfolio-file" type="file" accept=".pdf,.xlsx,.xls,.doc,.docx" style="display:none" />
+                                <input id="fset-portfolio-file" type="file" accept=".pdf,.xlsx,.xls,.doc,.docx" class="portfolio-file-input" />
                             </label>
-                            <span id="fset-portfolio-filename" style="font-size:0.85rem;opacity:0.75">
+                            <span id="fset-portfolio-filename" class="portfolio-filename">
                                 <span class="t-en">No file chosen</span><span class="t-ar">لم يُختر ملف</span>
                             </span>
                         </div>
-                        <small id="fset-portfolio-current" class="form-hint" style="margin-top:4px"></small>
+                        <small id="fset-portfolio-current" class="form-hint portfolio-current"></small>
                     </div>
                 </div>
                 <div class="modal-actions">

@@ -21,28 +21,26 @@ const DEFAULT_QS_KEYWORDS = [
     '"Tender Preparation"',
     'BOQ',
     '"Bill of Quantities"',
-    '"Bill of Quantity"'
+    '"Bill of Quantity"',
+    '"Cost Estimation"',
+    '"Civil Engineer"',
+    '"Construction Estimator"',
+    '"QS Consultant"',
+    '"Freelance QS"',
+    '"Part-time QS"',
+    '"Remote Quantity Surveyor"',
+    '"Contract Administration"',
+    '"Measurement Engineer"',
+    '"Price Analysis"',
+    '"Tender Comparison"'
 ].join(' OR ');
 
 const DEFAULT_SEARCH_LOCATION = 'United Arab Emirates';
 const DEFAULT_SEARCH_SITES = [
-    'upwork.com',
-    'peopleperhour.com',
-    'freelancer.com',
-    'fiverr.com',
-    'guru.com',
-    'truelancer.com',
-    'workana.com',
-    'malt.com',
-    'ureed.com',
-    'linkedin.com',
+    'baselomar.site',
     'indeed.com',
-    'worksome.com',
-    'yunojuno.com',
-    'fieldengineer.com',
-    'bark.com',
-    'designhill.com',
-    'kolabtree.com'
+    'upwork.com',
+    'linkedin.com'
 ];
 
 let cachedClient = null;
