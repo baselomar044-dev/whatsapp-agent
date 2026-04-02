@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-agent",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "A local WhatsApp sender agent with a live operational dashboard.",
   "main": "index.js",
   "scripts": {

@@ -20,7 +20,8 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy the rest of the app code
+# Copy the rest of the app code (bust cache with version)
+ARG CACHE_BUST=1
 COPY . .
 
 # Ensure data directory exists
