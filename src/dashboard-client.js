@@ -289,6 +289,53 @@ function renderSent(logs) {
     });
 }
 
+// ── Replies (incoming messages) render ────────────────────────────────
+let lastSeenReplyAt = null;
+
+function renderReplies(logs) {
+    const replies = logs.filter((l) => (l.status || '').toLowerCase() === 'received');
+    $('replies-count').textContent = String(replies.length);
+
+    // Show NEW badge if there are replies newer than last seen
+    const badge = $('replies-new-badge');
+    if (replies.length > 0) {
+        const newestAt = replies[0].sent_at;
+        if (lastSeenReplyAt === null || newestAt > lastSeenReplyAt) {
+            badge.hidden = false;
+        }
+    } else {
+        badge.hidden = true;
+    }
+
+    // Hide NEW badge when panel is opened
+    const panel = $('replies-count').closest('details');
+    if (panel && !panel._replyListenerAdded) {
+        panel._replyListenerAdded = true;
+        panel.addEventListener('toggle', () => {
+            if (panel.open) {
+                badge.hidden = true;
+                if (replies.length > 0) lastSeenReplyAt = replies[0].sent_at;
+            }
+        });
+    }
+
+    if (!replies.length) {
+        $('replies-list').innerHTML = '<div class="reply-card"><span class="reply-body t-en">No replies yet</span><span class="reply-body t-ar">لا توجد ردود بعد</span></div>';
+        return;
+    }
+
+    $('replies-list').innerHTML = replies.map((r) => {
+        const contact = allContacts.find((c) => c.phone === r.phone);
+        const name = contact ? contact.name : '';
+        return `<div class="reply-card">
+            ${name ? `<span class="reply-name">${esc(name)}</span>` : ''}
+            <span class="reply-phone">${esc(r.phone || '-')}</span>
+            <span class="reply-body">${esc(r.message_content || '[message]')}</span>
+            <span class="reply-time">${esc(when(r.sent_at))}</span>
+        </div>`;
+    }).join('');
+}
+
 // ── Contacts: group filter dropdown ────────────────────────────────────
 function refreshGroupFilterOptions() {
     const groupSet = new Set(Object.values(contactGroups).filter(Boolean));
@@ -515,6 +562,9 @@ function renderData(data) {
 
     // Update sent counts first so contact cards show them
     renderSent(data.sentNumbers || []);
+
+    // Render incoming replies from contacts
+    renderReplies(data.recentLogs || []);
 
     // Render contacts with stats
     renderContacts(data.contactsList || []);

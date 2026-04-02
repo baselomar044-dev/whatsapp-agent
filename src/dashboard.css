@@ -757,6 +757,27 @@ body.lang-ar .stat-item strong {
 }
 .sent-sub-panel .scroll-list { margin: 0; border: none; border-radius: 0; border-top: 1px solid var(--border); }
 
+/* Replies panel highlight */
+.replies-panel {
+    border-color: rgba(16, 185, 129, 0.3);
+}
+.replies-panel summary {
+    background: rgba(16, 185, 129, 0.05);
+}
+.reply-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+}
+.reply-card:last-child { border-bottom: none; }
+.reply-card .reply-name { font-weight: 600; color: var(--text-primary); }
+.reply-card .reply-phone { font-size: 0.75rem; color: var(--text-secondary); }
+.reply-card .reply-body { color: var(--text-primary); word-break: break-word; }
+.reply-card .reply-time { font-size: 0.72rem; color: var(--text-secondary); }
+
 /* Empty state */
 .empty-state {
     text-align: center;

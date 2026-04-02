@@ -101,6 +101,25 @@ client.on('code', (code) => {
     console.log('Enter this code on your phone: WhatsApp > Linked Devices > Link a Device > Link with Phone Number');
 });
 
+// ── Incoming messages from contacts ──────────────────────────────────
+client.on('message', async (msg) => {
+    try {
+        // Only log messages from individual chats (not groups, not from ourselves)
+        if (msg.from === 'status@broadcast') return;
+        if (msg.fromMe) return;
+        if (msg.from && msg.from.endsWith('@g.us')) return; // skip groups
+
+        const rawPhone = String(msg.from || '').replace('@c.us', '').replace(/[^\d]/g, '');
+        if (!rawPhone) return;
+
+        const body = msg.body || (msg.hasMedia ? '[media]' : '[message]');
+        await logMessage(rawPhone, 'received', body.slice(0, 500), new Date().toISOString());
+        console.log(`Incoming reply from ${rawPhone}: ${body.slice(0, 80)}`);
+    } catch (err) {
+        console.error('Failed to log incoming message:', err.message);
+    }
+});
+
 async function requestPairing(phoneNumber) {
     try {
         const code = await client.requestPairingCode(phoneNumber, true);
