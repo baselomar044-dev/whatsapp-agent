@@ -33,16 +33,67 @@ class PersonalityConfig {
     }
 }
 
+function extractJsonObject(text) {
+    const raw = String(text || '').trim();
+    if (!raw) return null;
+
+    const direct = raw.replace(/```json\n?|\n?```/g, '').trim();
+    if (direct.startsWith('{') && direct.endsWith('}')) {
+        return direct;
+    }
+
+    const start = direct.indexOf('{');
+    const end = direct.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+        return direct.slice(start, end + 1);
+    }
+
+    return null;
+}
+
+function heuristicAnalysis(message) {
+    const text = String(message || '').toLowerCase().trim();
+    const hasQuestion = text.includes('?') || text.includes('؟');
+    const isGreeting = /(hi|hello|hey|مرحبا|هلا|السلام)/i.test(text);
+    const isSpam = /(http|www\.|t\.me|free\s+money|bitcoin|promo|offer)/i.test(text);
+    const looksUrgent = /(urgent|asap|important|ضروري|مستعجل)/i.test(text);
+
+    if (isSpam) {
+        return {
+            shouldReply: false,
+            responseType: 'ignore',
+            sentiment: 'spam',
+            reasoning: 'Heuristic fallback detected likely spam.',
+            suggestedResponse: null
+        };
+    }
+
+    if (looksUrgent || hasQuestion || isGreeting) {
+        return {
+            shouldReply: true,
+            responseType: hasQuestion ? 'normal' : 'brief',
+            sentiment: looksUrgent ? 'urgent' : 'neutral',
+            reasoning: 'Heuristic fallback decided this deserves a response.',
+            suggestedResponse: null
+        };
+    }
+
+    return {
+        shouldReply: false,
+        responseType: 'ignore',
+        sentiment: 'neutral',
+        reasoning: 'Heuristic fallback decided silence is acceptable.',
+        suggestedResponse: null
+    };
+}
+
 async function analyzeMessage(message, sender, previousContext = []) {
     const groqClient = appConfig.manager.groqApiKey
         ? new Groq({ apiKey: appConfig.manager.groqApiKey })
         : null;
 
     if (!groqClient) {
-        return {
-            shouldReply: false,
-            reason: 'No Groq API configured'
-        };
+        return heuristicAnalysis(message);
     }
 
     const analysisPrompt = `
@@ -85,18 +136,26 @@ Respond ONLY with valid JSON.
         });
 
         const content = String(response.choices?.[0]?.message?.content || '{}').trim();
-        // Remove markdown JSON if present
-        const jsonStr = content.replace(/```json\n?|\n?```/g, '').trim();
-        const result = JSON.parse(jsonStr);
+        const jsonStr = extractJsonObject(content);
+        if (!jsonStr) {
+            return heuristicAnalysis(message);
+        }
 
-        return result;
+        const result = JSON.parse(jsonStr);
+        if (typeof result.shouldReply !== 'boolean') {
+            return heuristicAnalysis(message);
+        }
+
+        return {
+            shouldReply: result.shouldReply,
+            responseType: result.responseType || (result.shouldReply ? 'normal' : 'ignore'),
+            sentiment: result.sentiment || 'neutral',
+            reasoning: result.reasoning || 'Model decision',
+            suggestedResponse: result.suggestedResponse || null
+        };
     } catch (error) {
         console.error('Analysis error:', error.message);
-        return {
-            shouldReply: false,
-            reason: 'Analysis failed',
-            error: error.message
-        };
+        return heuristicAnalysis(message);
     }
 }
 
@@ -171,7 +230,9 @@ async function processIncomingMessage(message, sender) {
     // Step 2: If we should reply, generate natural response
     if (analysis.shouldReply) {
         console.log(`\n💭 Generating response...`);
-        const response = await generateResponse(message, sender, personality, []);
+        const response = analysis.suggestedResponse
+            ? String(analysis.suggestedResponse).trim()
+            : await generateResponse(message, sender, personality, []);
 
         if (response) {
             console.log(`\n✉️  Response:`);
