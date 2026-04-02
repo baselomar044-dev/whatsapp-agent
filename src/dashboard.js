@@ -608,11 +608,6 @@ function startDashboardServer(deps = {}) {
                     return;
                 }
 
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Manager chat is limited to local requests.' });
-                    return;
-                }
-
                 const body = await readJsonBody(request);
                 const attachmentRecord = createUploadedAttachment('dashboard-whatsapp', body.attachment);
                 const result = await runLocalManagerCommand({
@@ -637,11 +632,6 @@ function startDashboardServer(deps = {}) {
                     return;
                 }
 
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Freelance chat is limited to local requests.' });
-                    return;
-                }
-
                 const body = await readJsonBody(request);
                 const attachmentRecord = createUploadedAttachment('dashboard-freelance', body.attachment);
                 const result = await runFreelanceConversation('dashboard-freelance', String(body.message || '').trim(), attachmentRecord);
@@ -658,11 +648,6 @@ function startDashboardServer(deps = {}) {
                     return;
                 }
 
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Freelance scout trigger is limited to local requests.' });
-                    return;
-                }
-
                 const result = await triggerFreelanceManualSearch();
                 sendJson(response, 200, result);
                 return;
@@ -671,11 +656,6 @@ function startDashboardServer(deps = {}) {
             if (pathname === '/api/freelance/jobs/action') {
                 if (request.method !== 'POST') {
                     sendMethodNotAllowed(response);
-                    return;
-                }
-
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Freelance job actions are limited to local requests.' });
                     return;
                 }
 
@@ -688,11 +668,6 @@ function startDashboardServer(deps = {}) {
             if (pathname === '/api/freelance/settings') {
                 if (request.method !== 'POST') {
                     sendMethodNotAllowed(response);
-                    return;
-                }
-
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Freelance settings are limited to local requests.' });
                     return;
                 }
 
