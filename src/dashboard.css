@@ -1245,3 +1245,41 @@ body.light-mode input[type='number'].modal-input {
         height: 220px;
     }
 }
+
+/* ── Pairing section ──────────────────────────────────────────────── */
+.pairing-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+.pairing-section h4 {
+    margin: 0 0 0.5rem;
+}
+.pairing-section .pairing-hint {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0 0 0.5rem;
+}
+.pairing-row {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+#pair-phone {
+    flex: 1;
+    min-width: 160px;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.95rem;
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+#pair-btn {
+    white-space: nowrap;
+}
+#pair-result {
+    margin-top: 0.75rem;
+    display: none;
+}
