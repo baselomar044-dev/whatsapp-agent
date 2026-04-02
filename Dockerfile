@@ -1,6 +1,9 @@
 # Use Node 18 slim as base
 FROM node:18-slim
 
+# Force cache invalidation on rebuild
+ENV APP_VERSION=1.1.0
+
 # Install latest Chromium and dependencies
 RUN apt-get update \
     && apt-get install -y wget gnupg \
@@ -20,8 +23,7 @@ COPY package*.json ./
 # Install dependencies
 RUN npm ci
 
-# Copy the rest of the app code (bust cache with version)
-ARG CACHE_BUST=1
+# Copy the rest of the app code
 COPY . .
 
 # Ensure data directory exists
