@@ -129,12 +129,16 @@ function renderConversation(targetId, history) {
 }
 
 // ── QR render ─────────────────────────────────────────────────────────
+let _lastQrUrl = '';
 function renderQr(whatsapp) {
     const slot = $('qr-slot');
     if (!slot) return;
-    if (whatsapp.qrUrl) {
-        slot.innerHTML = `<img src="${esc(whatsapp.qrUrl)}" alt="WhatsApp QR" />`;
-    } else {
+    const url = whatsapp.qrUrl || '';
+    if (url && url !== _lastQrUrl) {
+        _lastQrUrl = url;
+        slot.innerHTML = `<img src="${esc(url)}" alt="WhatsApp QR" /><p style="margin:0.5rem 0 0;font-size:0.75rem;color:var(--text-secondary)">Open WhatsApp → Linked Devices → Scan this code</p>`;
+    } else if (!url && _lastQrUrl) {
+        _lastQrUrl = '';
         slot.textContent = 'QR will appear here when needed.';
     }
     $('wa-availability').textContent = whatsapp.status || 'unknown';

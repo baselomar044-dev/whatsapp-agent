@@ -15,6 +15,7 @@
     "dotenv": "^16.4.5",
     "groq-sdk": "^1.1.2",
     "node-cron": "^3.0.3",
+    "qrcode": "^1.5.4",
     "qrcode-terminal": "^0.12.0",
     "whatsapp-web.js": "^1.23.0",
     "xlsx": "^0.18.5"

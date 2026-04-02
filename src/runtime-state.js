@@ -1,4 +1,5 @@
 const { appConfig } = require('./config');
+const QRCode = require('qrcode');
 
 const MAX_EVENTS = 60;
 
@@ -101,13 +102,21 @@ function setAppStatus(status, message) {
 }
 
 function setWhatsAppQr(qr) {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`;
+    // Generate QR as base64 data URI (fast, no external API)
+    QRCode.toDataURL(qr, { width: 400, margin: 2 })
+        .then(dataUrl => {
+            state.whatsapp.qrUrl = dataUrl;
+        })
+        .catch(() => {
+            // Fallback to external API if local generation fails
+            state.whatsapp.qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`;
+        });
+    // Set status immediately, URL arrives async but nearly instant
     state.whatsapp.status = 'qr_required';
-    state.whatsapp.qrUrl = qrUrl;
     state.whatsapp.qrUpdatedAt = nowIso();
     state.whatsapp.lastError = null;
     pushEvent('whatsapp', 'QR code generated. Scan it to connect the bot.');
-    return qrUrl;
+    return 'generating...';
 }
 
 function markWhatsAppAuthenticated() {
