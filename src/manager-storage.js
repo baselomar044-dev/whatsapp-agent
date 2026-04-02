@@ -51,6 +51,40 @@ function getChatHistory(chatId, limit = appConfig.manager.historyLimit) {
     return history.slice(-limit);
 }
 
+function listConversationSummaries(limit = 20) {
+    ensureManagerStorage();
+
+    const entries = fs.readdirSync(chatsRoot, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && entry.name.endsWith('.json'))
+        .map((entry) => {
+            const chatKey = path.basename(entry.name, '.json');
+            const history = readJsonFile(path.join(chatsRoot, entry.name), []);
+            const lastMessage = history[history.length - 1] || null;
+
+            return {
+                chatId: chatKey,
+                title: chatKey.replace(/_/g, ' '),
+                lastMessage: lastMessage?.text || '',
+                lastRole: lastMessage?.role || null,
+                updatedAt: lastMessage?.timestamp || null,
+                messageCount: history.length
+            };
+        })
+        .sort((left, right) => {
+            const leftTime = left.updatedAt ? new Date(left.updatedAt).getTime() : 0;
+            const rightTime = right.updatedAt ? new Date(right.updatedAt).getTime() : 0;
+            return rightTime - leftTime;
+        });
+
+    return entries.slice(0, Math.max(1, limit));
+}
+
+function clearChatHistory(chatId) {
+    ensureManagerStorage();
+    const historyPath = getChatHistoryPath(chatId);
+    if (fs.existsSync(historyPath)) fs.unlinkSync(historyPath);
+}
+
 function appendChatHistory(chatId, entry, limit = appConfig.manager.historyLimit) {
     ensureManagerStorage();
     const historyPath = getChatHistoryPath(chatId);
@@ -141,6 +175,65 @@ function saveAttachmentRecord(message, media, options = {}) {
     return record;
 }
 
+function saveUploadedAttachment({
+    chatId,
+    senderId = 'dashboard',
+    senderPhone = '',
+    senderName = 'Dashboard User',
+    filename = 'attachment',
+    mimetype = 'application/octet-stream',
+    dataBase64,
+    caption = '',
+    category = 'dashboard-upload'
+}) {
+    ensureManagerStorage();
+
+    if (!dataBase64) {
+        throw new Error('Attachment data is required.');
+    }
+
+    const timestamp = new Date().toISOString();
+    const extension = getFileExtension(filename, mimetype);
+    const dayFolder = timestamp.slice(0, 10);
+    const attachmentDir = path.join(attachmentsRoot, dayFolder);
+    const baseName = sanitizeSegment(path.basename(filename, extension));
+    const uniqueName = `${Date.now()}-${baseName || 'attachment'}${extension}`;
+    const absolutePath = path.join(attachmentDir, uniqueName);
+    const relativePath = path.relative(process.cwd(), absolutePath);
+
+    ensureDirectory(attachmentDir);
+    fs.writeFileSync(absolutePath, Buffer.from(dataBase64, 'base64'));
+
+    const record = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`,
+        timestamp,
+        messageId: null,
+        chatId: chatId || 'dashboard',
+        senderId,
+        senderPhone,
+        senderName,
+        fromMe: true,
+        isManagerMessage: true,
+        caption: String(caption || '').trim(),
+        mimetype,
+        filename,
+        filesize: Buffer.byteLength(dataBase64, 'base64'),
+        absolutePath,
+        relativePath,
+        category
+    };
+
+    const index = getAttachmentsIndex();
+    index.unshift(record);
+    writeAttachmentsIndex(index.slice(0, 250));
+
+    return record;
+}
+
+function getLatestAttachmentForChat(chatId) {
+    return getAttachmentsIndex().find((item) => item.chatId === chatId) || null;
+}
+
 function listRecentAttachments(limit = appConfig.manager.recentAttachmentLimit) {
     return getAttachmentsIndex().slice(0, limit);
 }
@@ -156,10 +249,14 @@ function getAttachmentStats() {
 
 module.exports = {
     appendChatHistory,
+    clearChatHistory,
     ensureManagerStorage,
     getAttachmentStats,
     getChatHistory,
+    getLatestAttachmentForChat,
     listRecentAttachments,
+    listConversationSummaries,
+    saveUploadedAttachment,
     saveAttachmentRecord,
     storageRoot
 };

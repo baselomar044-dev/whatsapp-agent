@@ -1,10 +1,10 @@
 const path = require('path');
 
-const { GoogleGenAI } = require('@google/genai');
+const Groq = require('groq-sdk');
 
 const { appConfig } = require('./config');
-const { getContactStats, getDailyLogStats } = require('./database');
-const { listRecentAttachments, getAttachmentStats, saveAttachmentRecord, getChatHistory, appendChatHistory, ensureManagerStorage } = require('./manager-storage');
+const { getAutomationSettings, getContactStats, getDailyLogStats, upsertAppSetting } = require('./database');
+const { listRecentAttachments, getAttachmentStats, getLatestAttachmentForChat, saveAttachmentRecord, getChatHistory, appendChatHistory, ensureManagerStorage } = require('./manager-storage');
 const { normalizePhoneNumber } = require('./phone');
 const {
     getRuntimeSnapshot,
@@ -15,10 +15,10 @@ const {
     recordManagerReply,
     setManagerStatus
 } = require('./runtime-state');
-const { isBlastRunning, runDailyBlast } = require('./scheduler');
+const { isBlastRunning, reconfigureScheduler, runDailyBlast } = require('./scheduler');
 
-const geminiClient = appConfig.manager.geminiApiKey
-    ? new GoogleGenAI({ apiKey: appConfig.manager.geminiApiKey })
+const groqClient = appConfig.manager.groqApiKey
+    ? new Groq({ apiKey: appConfig.manager.groqApiKey })
     : null;
 
 const ignoredOutgoingIds = new Set();
@@ -79,16 +79,27 @@ function isAuthorizedManagerMessage(message, ownWid) {
 
 function buildHelpText() {
     return [
-        `${appConfig.manager.name} commands:`,
-        '- status',
-        '- help',
-        '- contacts',
-        '- attachments',
-        '- blast now',
+        `${appConfig.manager.name} | أوامر وكيل الواتساب:`,
+        '- status | الحالة',
+        '- help | مساعدة',
+        '- contacts | جهات الاتصال',
+        '- attachments | المرفقات',
+        '- blast now | ابدأ الإرسال',
+        '- automation | إعدادات الأتمتة',
+        '- set message | ضع الرسالة',
+        '- set time 09:00',
+        '- set range 20 40',
+        '- schedule on | schedule off',
         '- send 9715XXXXXXXX | your message',
-        '- sendfile 9715XXXXXXXX | optional caption  (send this with an attached file)',
+        '- send to 9715XXXXXXXX | your message',
+        '- sendfile 9715XXXXXXXX | optional caption',
+        '- file to 9715XXXXXXXX | optional caption',
+        '- voice 9715XXXXXXXX | optional caption  (uses uploaded voice/file)',
         '',
-        'You can also chat normally. I will answer with Gemini when GEMINI_API_KEY is configured.'
+        'Attach a file or record a voice note in the chat box, then use sendfile/file/voice to deliver it.',
+        'ارفع ملفاً أو سجل voice note من صندوق المحادثة ثم استخدم أوامر file أو voice لإرسالها.',
+        '',
+        'You can also chat normally. I will answer with AI when configured.'
     ].join('\n');
 }
 
@@ -99,7 +110,7 @@ function parseCommand(text) {
         return { name: 'empty' };
     }
 
-    const sendMatch = value.match(/^\/?send\s+([+\d][\d\s()-]+)\s*(?:\||:|\n)\s*([\s\S]+)$/i);
+    const sendMatch = value.match(/^\/?send(?:\s+to)?\s+([+\d][\d\s()-]+)\s*(?:\||:|\n)\s*([\s\S]+)$/i);
     if (sendMatch) {
         return {
             name: 'send',
@@ -108,7 +119,7 @@ function parseCommand(text) {
         };
     }
 
-    const sendFileMatch = value.match(/^\/?sendfile\s+([+\d][\d\s()-]+)(?:\s*(?:\||:|\n)\s*([\s\S]*))?$/i);
+    const sendFileMatch = value.match(/^\/?(?:sendfile|file(?:\s+to)?|voice)\s+([+\d][\d\s()-]+)(?:\s*(?:\||:|\n)\s*([\s\S]*))?$/i);
     if (sendFileMatch) {
         return {
             name: 'sendfile',
@@ -127,6 +138,43 @@ function parseCommand(text) {
 
     if (/^\/?contacts$/i.test(value)) {
         return { name: 'contacts' };
+    }
+
+    if (/^\/?automation$/i.test(value)) {
+        return { name: 'automation' };
+    }
+
+    const setMessageMatch = value.match(/^\/?set\s+message\s*(?:\||:|\n)\s*([\s\S]+)$/i);
+    if (setMessageMatch) {
+        return {
+            name: 'set_message',
+            message: setMessageMatch[1].trim()
+        };
+    }
+
+    const setTimeMatch = value.match(/^\/?set\s+time\s+(\d{1,2}:\d{2})$/i);
+    if (setTimeMatch) {
+        return {
+            name: 'set_time',
+            sendTime: setTimeMatch[1].trim()
+        };
+    }
+
+    const setRangeMatch = value.match(/^\/?set\s+range\s+(\d+)\s+(\d+)$/i);
+    if (setRangeMatch) {
+        return {
+            name: 'set_range',
+            minMessages: Number.parseInt(setRangeMatch[1], 10),
+            maxMessages: Number.parseInt(setRangeMatch[2], 10)
+        };
+    }
+
+    const scheduleMatch = value.match(/^\/?schedule\s+(on|off)$/i);
+    if (scheduleMatch) {
+        return {
+            name: 'set_schedule',
+            enabled: scheduleMatch[1].toLowerCase() === 'on'
+        };
     }
 
     const attachmentsMatch = value.match(/^\/?(attachments|files)(?:\s+(\d+))?$/i);
@@ -159,15 +207,26 @@ async function buildStatusSummary() {
     const attachmentStats = getAttachmentStats();
 
     return [
-        `App: ${runtime.appStatus}`,
-        `WhatsApp: ${runtime.whatsapp.status}`,
-        `Scheduler: ${runtime.scheduler.cronSchedule || 'not configured'}`,
-        `Blast: ${runtime.blast.status}`,
-        `Contacts: ${contacts.active} active / ${contacts.total} total`,
-        `Logs today: ${logs.sent} sent, ${logs.failed} failed, ${logs.total} total`,
-        `Manager agent: ${runtime.manager.status}`,
-        `Saved attachments: ${attachmentStats.total}`,
-        `Last attachment: ${attachmentStats.latest ? attachmentStats.latest.relativePath : 'none'}`
+        `App | التطبيق: ${runtime.appStatus}`,
+        `WhatsApp | الواتساب: ${runtime.whatsapp.status}`,
+        `Scheduler | الجدولة: ${runtime.scheduler.cronSchedule || 'not configured'}`,
+        `Blast | الإرسال: ${runtime.blast.status}`,
+        `Contacts | جهات الاتصال: ${contacts.active} active / ${contacts.total} total`,
+        `Logs today | سجلات اليوم: ${logs.sent} sent, ${logs.failed} failed, ${logs.total} total`,
+        `Manager agent | الوكيل: ${runtime.manager.status}`,
+        `Saved attachments | المرفقات المحفوظة: ${attachmentStats.total}`,
+        `Last attachment | آخر مرفق: ${attachmentStats.latest ? attachmentStats.latest.relativePath : 'none'}`
+    ].join('\n');
+}
+
+async function buildAutomationSummary() {
+    const automation = await getAutomationSettings();
+
+    return [
+        `Message | الرسالة: ${automation.messageTemplate}`,
+        `Time | الوقت: ${automation.sendTime}`,
+        `Range | العدد: ${automation.minMessages} to ${automation.maxMessages}`,
+        `Scheduled | الجدولة: ${automation.scheduleEnabled ? 'on' : 'off'}`
     ].join('\n');
 }
 
@@ -186,9 +245,9 @@ function formatAttachmentList(limit) {
 }
 
 async function buildAiReply(chatId, messageText, attachmentRecord) {
-    if (!geminiClient) {
+    if (!groqClient) {
         return [
-            'Gemini chat is not active yet because GEMINI_API_KEY is missing.',
+            'AI chat is not active yet because GROQ_API_KEY is missing.',
             'Manager commands still work:',
             buildHelpText()
         ].join('\n\n');
@@ -198,52 +257,63 @@ async function buildAiReply(chatId, messageText, attachmentRecord) {
     const runtime = getRuntimeSnapshot();
     const recentAttachments = listRecentAttachments(5);
     const systemPrompt = appConfig.manager.systemPrompt || [
-        `You are ${appConfig.manager.name}, a WhatsApp operations manager for the owner of this account.`,
-        'You answer clearly and concisely.',
-        'You do not claim that messages were sent or actions were executed unless the runtime context explicitly says so.',
-        'If the user wants an operational action, guide them to these commands:',
-        'status, contacts, attachments, blast now, send PHONE | MESSAGE, sendfile PHONE | CAPTION',
-        'You may discuss strategy, drafts, wording, priorities, and summaries in natural language.'
+        `You are ${appConfig.manager.name}, a professional WhatsApp operations manager for the owner of this account.`,
+        'You are fluent in both Arabic and English. Match the language the user writes in — if they write Arabic, respond in Arabic; if English, respond in English. If mixed, prefer the dominant language.',
+        'Write in a polished, organized manner: use proper punctuation (، and ؟ for Arabic), clear paragraphs, and bullet points when listing items.',
+        'Keep responses concise, direct, and actionable — no filler or repetition.',
+        'You do not claim that messages were sent or actions were executed unless the runtime context explicitly confirms it.',
+        'If the user wants an operational action, guide them to the correct command:',
+        'status, contacts, attachments, blast now, send PHONE | MESSAGE, sendfile PHONE | CAPTION.',
+        'You may discuss strategy, drafts, wording, priorities, and summaries in natural language.',
+        'Never expose internal system details, API keys, or technical errors to the user.'
     ].join(' ');
 
-    const prompt = [
-        systemPrompt,
-        'Current runtime snapshot:',
-        JSON.stringify({
-            appStatus: runtime.appStatus,
-            whatsapp: runtime.whatsapp.status,
-            scheduler: runtime.scheduler.cronSchedule,
-            blast: runtime.blast.status,
-            manager: runtime.manager.status
-        }, null, 2),
-        'Recent saved attachments:',
-        recentAttachments.length
-            ? recentAttachments.map((item) => `${item.filename || path.basename(item.absolutePath)} | ${item.mimetype} | ${item.relativePath}`).join('\n')
-            : 'None',
-        attachmentRecord
-            ? `Latest attachment from the user: ${JSON.stringify({
-                filename: attachmentRecord.filename,
-                mimetype: attachmentRecord.mimetype,
-                path: attachmentRecord.relativePath,
-                caption: attachmentRecord.caption
-            }, null, 2)}`
-            : 'No new attachment in the latest message.',
-        'Conversation history:',
-        history.length
-            ? history.map((item) => `${item.role.toUpperCase()}: ${item.text}`).join('\n')
-            : 'No previous history.',
-        `Latest user message:\n${messageText}`
-    ].join('\n\n');
+    const messages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'system', content: [
+            'Current runtime snapshot:',
+            JSON.stringify({
+                appStatus: runtime.appStatus,
+                whatsapp: runtime.whatsapp.status,
+                scheduler: runtime.scheduler.cronSchedule,
+                blast: runtime.blast.status,
+                manager: runtime.manager.status
+            }, null, 2),
+            'Recent saved attachments:',
+            recentAttachments.length
+                ? recentAttachments.map((item) => `${item.filename || path.basename(item.absolutePath)} | ${item.mimetype} | ${item.relativePath}`).join('\n')
+                : 'None',
+            attachmentRecord
+                ? `Latest attachment from the user: ${JSON.stringify({
+                    filename: attachmentRecord.filename,
+                    mimetype: attachmentRecord.mimetype,
+                    path: attachmentRecord.relativePath,
+                    caption: attachmentRecord.caption
+                }, null, 2)}`
+                : 'No new attachment in the latest message.'
+        ].join('\n\n') }
+    ];
 
-    const response = await geminiClient.models.generateContent({
+    for (const entry of history) {
+        messages.push({
+            role: entry.role === 'user' ? 'user' : 'assistant',
+            content: entry.text
+        });
+    }
+
+    messages.push({ role: 'user', content: messageText });
+
+    const response = await groqClient.chat.completions.create({
         model: appConfig.manager.model,
-        contents: prompt
+        messages,
+        max_tokens: 2048,
+        temperature: 0.7
     });
 
-    const text = String(response.text || '').trim();
+    const text = String(response.choices?.[0]?.message?.content || '').trim();
 
     if (!text) {
-        throw new Error('Gemini returned an empty manager response.');
+        throw new Error('AI returned an empty manager response.');
     }
 
     return text;
@@ -285,6 +355,134 @@ async function captureAttachment(message, { isManagerMessage }) {
 function normalizeReplyText(text) {
     const prefix = String(appConfig.manager.replyPrefix || '');
     return `${prefix}${text}`.trim();
+}
+
+async function runLocalManagerCommand({
+    chatId = 'dashboard-local',
+    text,
+    attachmentRecord = null,
+    sendManagedMessage,
+    sendManagedMedia,
+    client
+}) {
+    const command = parseCommand(text);
+    const latestAttachment = attachmentRecord || getLatestAttachmentForChat(chatId);
+
+    if (command.name === 'empty' && attachmentRecord) {
+        const reply = [
+            'Attachment/voice received and saved. | تم حفظ المرفق أو الرسالة الصوتية.',
+            `Path: ${attachmentRecord.relativePath}`,
+            'Use sendfile/file/voice with a phone number to deliver it.'
+        ].join('\n');
+
+        appendChatHistory(chatId, {
+            role: 'assistant',
+            text: reply,
+            timestamp: new Date().toISOString()
+        });
+
+        recordManagerReply(reply.slice(0, 120));
+        return { reply };
+    }
+
+    if (command.name !== 'empty') {
+        appendChatHistory(chatId, {
+            role: 'user',
+            text: text || (attachmentRecord ? `[attachment] ${attachmentRecord.filename}` : ''),
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    let reply = '';
+
+    switch (command.name) {
+    case 'help':
+        reply = buildHelpText();
+        break;
+    case 'status':
+        reply = await buildStatusSummary();
+        break;
+    case 'contacts': {
+        const stats = await getContactStats();
+        reply = `Contacts | جهات الاتصال: ${stats.active} active, ${stats.inactive} inactive, ${stats.total} total.`;
+        break;
+    }
+    case 'automation':
+        reply = await buildAutomationSummary();
+        break;
+    case 'set_message':
+        await upsertAppSetting('blaster_message', command.message);
+        reply = 'Automation message updated. | تم تحديث رسالة الأتمتة.';
+        break;
+    case 'set_time':
+        await upsertAppSetting('automation_send_time', command.sendTime);
+        await reconfigureScheduler();
+        reply = `Automation time updated to ${command.sendTime}. | تم تحديث وقت الأتمتة إلى ${command.sendTime}.`;
+        break;
+    case 'set_range':
+        await Promise.all([
+            upsertAppSetting('automation_min_messages', String(command.minMessages)),
+            upsertAppSetting('automation_max_messages', String(command.maxMessages))
+        ]);
+        reply = `Automation range updated to ${command.minMessages} - ${command.maxMessages}. | تم تحديث العدد إلى ${command.minMessages} - ${command.maxMessages}.`;
+        break;
+    case 'set_schedule':
+        await upsertAppSetting('automation_schedule_enabled', command.enabled ? 'true' : 'false');
+        await reconfigureScheduler();
+        reply = `Schedule turned ${command.enabled ? 'on' : 'off'}. | تم ${command.enabled ? 'تشغيل' : 'إيقاف'} الجدولة.`;
+        break;
+    case 'attachments':
+        reply = formatAttachmentList(command.limit);
+        break;
+    case 'blast_now':
+        if (isBlastRunning()) {
+            reply = 'A blast is already running.';
+            break;
+        }
+
+        runDailyBlast('dashboard-agent').catch((error) => {
+            recordRuntimeError('manager', error);
+        });
+        reply = 'Blast started in the background.';
+        break;
+    case 'send':
+        await sendManagedMessage(command.phone, command.message);
+        reply = `Message sent to ${normalizePhoneNumber(command.phone)}.`;
+        break;
+    case 'sendfile':
+        if (!latestAttachment) {
+            reply = 'Attach or record a file first, then use sendfile/file/voice. | ارفع أو سجل ملفاً أولاً ثم استخدم sendfile أو voice.';
+            break;
+        }
+
+        await sendManagedMedia(command.phone, latestAttachment.absolutePath, command.caption || latestAttachment.caption);
+        reply = `File or voice sent to ${normalizePhoneNumber(command.phone)} from ${latestAttachment.relativePath}.`;
+        break;
+    case 'chat':
+        reply = await buildAiReply(chatId, command.message, attachmentRecord);
+        break;
+    case 'empty':
+    default:
+        reply = 'Type a command or ask the manager agent something.';
+        break;
+    }
+
+    if (client && command.name === 'chat' && client.info?.wid?._serialized) {
+        recordManagerInbound({
+            chatId,
+            fromManager: true,
+            command: command.name
+        });
+    }
+
+    appendChatHistory(chatId, {
+        role: 'assistant',
+        text: reply,
+        timestamp: new Date().toISOString()
+    });
+    recordManagerReply(reply.slice(0, 120));
+
+    return { reply };
 }
 
 function createManagerAgent({ client, sendManagedMessage, sendManagedMedia }) {
@@ -445,7 +643,9 @@ function createManagerAgent({ client, sendManagedMessage, sendManagedMedia }) {
 }
 
 module.exports = {
+    buildHelpText,
     createManagerAgent,
     isAuthorizedManagerMessage,
-    parseCommand
+    parseCommand,
+    runLocalManagerCommand
 };

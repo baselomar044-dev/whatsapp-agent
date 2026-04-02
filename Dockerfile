@@ -28,7 +28,8 @@ RUN mkdir -p /app/data
 
 # Environment variables needed for Puppeteer to run headless Chrome in a container
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
+  PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable \
+  CHROME_EXECUTABLE_PATH=/usr/bin/google-chrome-stable
 
 # Map Dashboard Port
 ENV DASHBOARD_PORT=3000

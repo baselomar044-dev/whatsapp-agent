@@ -11,6 +11,8 @@ services:
     envVars:
       - key: PORT
         value: 3000
+      - key: DASHBOARD_HOST
+        value: 0.0.0.0
       - key: DASHBOARD_PORT
         value: 3000
       - key: WHATSAPP_SESSION_PATH
@@ -22,7 +24,7 @@ services:
         sync: false
       - key: SUPABASE_KEY
         sync: false
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
         sync: false
       - key: DASHBOARD_PASSWORD
         sync: false

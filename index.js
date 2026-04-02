@@ -8,7 +8,11 @@ const { createManagerAgent } = require('./src/manager-agent');
 console.log('WhatsApp Sender Agent starting...');
 setAppStatus('starting', 'Application booting.');
 
-const dashboardServer = startDashboardServer();
+const dashboardServer = startDashboardServer({
+    client,
+    sendManagedMessage,
+    sendManagedMedia
+});
 let schedulerStarted = false;
 let isShuttingDown = false;
 
@@ -18,29 +22,37 @@ createManagerAgent({
     sendManagedMedia
 });
 
-Promise.resolve(client.initialize()).catch((error) => {
-    recordRuntimeError('whatsapp', error);
-    setAppStatus('error', `WhatsApp initialization failed: ${error.message}`);
-    console.error('WhatsApp initialization failed:', error);
-});
+const isPreview = process.argv.includes('--preview');
 
-client.on('ready', () => {
-    setAppStatus('running', 'Application is online.');
+if (isPreview) {
+    console.log('--- PREVIEW MODE ACTIVE ---');
+    console.log('WhatsApp connection and blast schedulers are strictly DISABLED.');
+    setAppStatus('running', 'Application online in PREVIEW MODE (no WhatsApp connected).');
+} else {
+    Promise.resolve(client.initialize()).catch((error) => {
+        recordRuntimeError('whatsapp', error);
+        setAppStatus('error', `WhatsApp initialization failed: ${error.message}`);
+        console.error('WhatsApp initialization failed:', error);
+    });
 
-    if (!schedulerStarted) {
-        setupScheduler();
-        schedulerStarted = true;
-    }
-    
-    // Optional: Run immediately for testing if a command line argument is passed
-    if (process.argv.includes('--now')) {
-        pushEvent('app', 'Immediate blast requested with --now.');
-        runDailyBlast('immediate').catch((error) => {
-            setAppStatus('error', `Immediate blast failed: ${error.message}`);
-            console.error('Immediate blast failed:', error);
-        });
-    }
-});
+    client.on('ready', () => {
+        setAppStatus('running', 'Application is online.');
+
+        if (!schedulerStarted) {
+            setupScheduler();
+            schedulerStarted = true;
+        }
+        
+        // Optional: Run immediately for testing if a command line argument is passed
+        if (process.argv.includes('--now')) {
+            pushEvent('app', 'Immediate blast requested with --now.');
+            runDailyBlast('immediate').catch((error) => {
+                setAppStatus('error', `Immediate blast failed: ${error.message}`);
+                console.error('Immediate blast failed:', error);
+            });
+        }
+    });
+}
 
 async function shutdown() {
     if (isShuttingDown) {

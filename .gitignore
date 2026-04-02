@@ -7,3 +7,4 @@ storage/
 .wwebjs_auth/
 .wwebjs_cache/
 render_owners.json
+deploy_out.txt

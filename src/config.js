@@ -23,7 +23,7 @@ const DEFAULTS = {
     managerRecentAttachmentLimit: 10,
     managerAutoSaveIncomingMedia: true,
     managerReplyPrefix: '',
-    geminiModel: 'gemini-2.5-flash-lite'
+    groqModel: 'llama-3.3-70b-versatile'
 };
 
 function requiredString(env, key) {
@@ -101,7 +101,7 @@ function normalizeAuthorizedNumbers(value) {
 }
 
 function resolveBrowserExecutablePath(env = process.env) {
-    const explicitPath = String(env.CHROME_EXECUTABLE_PATH || '').trim();
+    const explicitPath = String(env.CHROME_EXECUTABLE_PATH || env.PUPPETEER_EXECUTABLE_PATH || '').trim();
 
     if (explicitPath) {
         return fs.existsSync(explicitPath) ? explicitPath : undefined;
@@ -136,7 +136,7 @@ function buildConfig(env = process.env) {
         parseIntegerSetting(env.MAX_DELAY_SECONDS, DEFAULTS.maxDelaySeconds, { min: 0, max: 3600 })
     );
     const dashboardHost = String(env.DASHBOARD_HOST || DEFAULTS.dashboardHost).trim() || DEFAULTS.dashboardHost;
-    const dashboardPort = parseIntegerSetting(env.DASHBOARD_PORT, DEFAULTS.dashboardPort, { min: 1, max: 65535 });
+    const dashboardPort = parseIntegerSetting(env.DASHBOARD_PORT || env.PORT, DEFAULTS.dashboardPort, { min: 1, max: 65535 });
 
     return {
         supabaseUrl: requiredString(env, 'SUPABASE_URL'),
@@ -168,8 +168,8 @@ function buildConfig(env = process.env) {
             autoSaveIncomingMedia: parseBooleanSetting(env.MANAGER_AUTO_SAVE_INCOMING_MEDIA, DEFAULTS.managerAutoSaveIncomingMedia),
             replyPrefix: String(env.MANAGER_REPLY_PREFIX || DEFAULTS.managerReplyPrefix),
             authorizedNumbers: normalizeAuthorizedNumbers(env.WHATSAPP_MANAGER_NUMBERS),
-            geminiApiKey: String(env.GEMINI_API_KEY || '').trim(),
-            model: String(env.GEMINI_MODEL || DEFAULTS.geminiModel).trim() || DEFAULTS.geminiModel,
+            groqApiKey: String(env.GROQ_API_KEY || '').trim(),
+            model: String(env.GROQ_MODEL || DEFAULTS.groqModel).trim() || DEFAULTS.groqModel,
             systemPrompt: String(env.MANAGER_SYSTEM_PROMPT || '').trim()
         },
         dashboardPassword: String(env.DASHBOARD_PASSWORD || '').trim()
@@ -192,7 +192,7 @@ function toPublicDashboardConfig(config) {
         managerEnabled: config.manager.enabled,
         managerAuthorizedCount: config.manager.authorizedNumbers.length,
         managerModel: config.manager.model,
-        managerProvider: 'Gemini'
+        managerProvider: 'Groq'
     };
 }
 

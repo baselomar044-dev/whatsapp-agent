@@ -1,115 +1,706 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WhatsApp Sender Dashboard | لوحة تحكم الواتساب</title>
+    <title>W&amp;F Workspace</title>
     <link rel="stylesheet" href="/dashboard.css" />
 </head>
-<body>
-    <main class="shell">
-        <section class="hero">
+<body class="lang-en">
+    <main class="dashboard-shell">
+        <header class="page-header">
             <div>
-                <div class="eyebrow">Local Operations Console | وحدة العمليات الميدانية</div>
-                <h1>WhatsApp Sender Dashboard<br><span style="font-size: 0.6em; color: var(--muted); display: block; margin-top: 10px; font-weight: normal;">لوحة تحكم إرسال الواتساب</span></h1>
-                <p>Live control room for connection health, scheduling, manual runs, QR recovery, and message-preview checks.<br>غرفة تحكم مباشرة لحالة الاتصال، الجدولة، الإرسال اليدوي، استعادة رمز QR، ومعاينة الرسائل.</p>
+                <div class="brand-kicker">W&amp;F</div>
+                <h1>
+                    <span class="t-en" id="app-name-display-en">W&amp;F Workspace</span>
+                    <span class="t-ar" id="app-name-display-ar">مساحة عمل W&amp;F</span>
+                </h1>
+                <p>
+                    <span class="t-en">WhatsApp &amp; Freelance in one bilingual workspace.</span>
+                    <span class="t-ar">واتساب وفريلانس في مساحة عمل واحدة.</span>
+                </p>
             </div>
-            <div class="hero-meta">
-                <span id="hero-whatsapp" class="pill skeleton">WhatsApp loading</span>
-                <span id="hero-health" class="pill skeleton">Health loading</span>
-                <span id="hero-refresh" class="chip skeleton">Waiting for first refresh</span>
-                <span id="hero-url" class="chip skeleton">Dashboard URL loading</span>
-                <span id="hero-app" class="chip skeleton">App status loading</span>
-                <span id="hero-action" class="pill skeleton">Controls readying</span>
+            <div class="top-actions">
+                <button id="settings-btn" type="button" title="Settings">⚙️</button>
+                <button id="dark-mode-toggle" type="button" title="Toggle dark/light mode">🌙</button>
+                <button id="lang-toggle-btn" type="button">
+                    <span class="t-en">عربي</span>
+                    <span class="t-ar">English</span>
+                </button>
+                <button id="refresh-all" type="button">
+                    <span class="t-en">Refresh</span>
+                    <span class="t-ar">تحديث</span>
+                </button>
+                <span id="last-refresh" class="badge neutral">Waiting</span>
             </div>
+        </header>
+
+        <section class="two-agent-layout">
+            <section class="agent-side whatsapp-side">
+                <article class="conversation-panel hero-panel">
+                    <div class="conversation-head">
+                        <div>
+                            <div class="agent-kicker">
+                                <span class="t-en">WhatsApp Agent</span>
+                                <span class="t-ar">وكيل الواتساب</span>
+                            </div>
+                            <h2>
+                                <span class="t-en">Full WhatsApp Control</span>
+                                <span class="t-ar">تحكم كامل بالواتساب</span>
+                            </h2>
+                            <p id="wa-summary">Loading WhatsApp workspace...</p>
+                        </div>
+                        <div class="head-statuses">
+                            <span id="wa-status-pill" class="badge neutral">Loading</span>
+                            <span id="wa-health-pill" class="badge neutral">Loading</span>
+                            <button id="run-blast" type="button">
+                                <span class="t-en">Blast Now</span>
+                                <span class="t-ar">إرسال الآن</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="wa-conversation" class="conversation-stream"></div>
+
+                    <div class="quick-commands">
+                        <span>status</span>
+                        <span>contacts</span>
+                        <span>automation</span>
+                        <span>send 9715... | hello</span>
+                        <span>voice 9715... | note</span>
+                        <span>set time 09:00</span>
+                    </div>
+
+                    <div id="wa-upload-state" class="upload-state">
+                        <span class="t-en">No attachment selected</span>
+                        <span class="t-ar">لا يوجد مرفق</span>
+                    </div>
+
+                    <form id="wa-chat-form" class="conversation-form">
+                        <textarea id="wa-chat-input" rows="4" 
+                            data-en-placeholder="Type a command or tell the WhatsApp agent what to do" 
+                            data-ar-placeholder="اكتب أمراً أو اطلب من الوكيل ما تريد" 
+                            placeholder="Type a command..."></textarea>
+                        <div class="conversation-toolbar">
+                            <input id="wa-file-input" type="file" hidden />
+                            <button id="wa-attach-button" type="button">
+                                <span class="t-en">Attach</span><span class="t-ar">إرفاق</span>
+                            </button>
+                            <button id="wa-voice-button" type="button">
+                                <span class="t-en">Voice</span><span class="t-ar">صوت</span>
+                            </button>
+                            <button id="wa-clear-upload" type="button">
+                                <span class="t-en">Clear</span><span class="t-ar">مسح</span>
+                            </button>
+                            <button id="wa-clear-conversation" type="button" class="danger-button" title="Clear conversation history">
+                                <span class="t-en">🗑 Clear Chat</span><span class="t-ar">🗑 مسح المحادثة</span>
+                            </button>
+                            <button id="wa-send-button" type="submit" class="primary-button">
+                                <span class="t-en">Send</span><span class="t-ar">إرسال</span>
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <details class="collapse-panel" open>
+                    <summary>
+                        <span class="t-en">QR &amp; Connection</span>
+                        <span class="t-ar">رمز الاستجابة والحالة</span>
+                    </summary>
+                    <div class="collapse-content info-grid">
+                        <article class="info-panel sub-panel">
+                            <div class="panel-title-row">
+                                <h3>
+                                    <span class="t-en">QR &amp; Availability</span>
+                                    <span class="t-ar">رمز الاستجابة والتوفر</span>
+                                </h3>
+                                <span id="wa-availability" class="badge neutral">Loading</span>
+                            </div>
+                            <div class="qr-layout">
+                                <div id="qr-slot" class="qr-slot">QR will appear here.</div>
+                                <div class="stat-list">
+                                    <div class="stat-item">
+                                        <span><span class="t-en">Connection</span><span class="t-ar">الاتصال</span></span>
+                                        <strong id="wa-connection-text">-</strong>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span><span class="t-en">Authenticated</span><span class="t-ar">موثق</span></span>
+                                        <strong id="wa-authenticated">-</strong>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span><span class="t-en">Ready</span><span class="t-ar">جاهز</span></span>
+                                        <strong id="wa-ready">-</strong>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span><span class="t-en">Issue</span><span class="t-ar">مشكلة</span></span>
+                                        <strong id="wa-issue">-</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="info-panel sub-panel">
+                            <div class="panel-title-row">
+                                <h3>
+                                    <span class="t-en">Automation</span>
+                                    <span class="t-ar">ملخص الأتمتة</span>
+                                </h3>
+                                <span id="automation-status" class="badge neutral">-</span>
+                            </div>
+                            <div class="stat-list">
+                                <div class="stat-item">
+                                    <span><span class="t-en">Message</span><span class="t-ar">الرسالة</span></span>
+                                    <strong id="automation-message-preview">-</strong>
+                                </div>
+                                <div class="stat-item">
+                                    <span><span class="t-en">Time</span><span class="t-ar">الوقت</span></span>
+                                    <strong id="automation-time-preview">-</strong>
+                                </div>
+                                <div class="stat-item">
+                                    <span><span class="t-en">Range</span><span class="t-ar">العدد</span></span>
+                                    <strong id="automation-range-preview">-</strong>
+                                </div>
+                                <div class="stat-item">
+                                    <span><span class="t-en">Schedule</span><span class="t-ar">الجدولة</span></span>
+                                    <strong id="automation-enabled-preview">-</strong>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </details>
+
+                <details class="collapse-panel" id="contacts-panel">
+                    <summary>
+                        <span class="t-en">Contacts &amp; Logs</span>
+                        <span class="t-ar">جهات الاتصال والسجلات</span>
+                    </summary>
+                    <div class="collapse-content">
+
+                        <!-- Stats bar -->
+                        <div class="contacts-stats-bar">
+                            <div class="cstat-item">
+                                <span class="cstat-label"><span class="t-en">Total</span><span class="t-ar">الكل</span></span>
+                                <strong id="cs-total">0</strong>
+                            </div>
+                            <div class="cstat-item">
+                                <span class="cstat-label"><span class="t-en">Active</span><span class="t-ar">نشط</span></span>
+                                <strong id="cs-active">0</strong>
+                            </div>
+                            <div class="cstat-item">
+                                <span class="cstat-label"><span class="t-en">Inactive</span><span class="t-ar">غير نشط</span></span>
+                                <strong id="cs-inactive">0</strong>
+                            </div>
+                            <div class="cstat-item">
+                                <span class="cstat-label"><span class="t-en">Sent Today</span><span class="t-ar">أُرسل اليوم</span></span>
+                                <strong id="cs-sent-today">0</strong>
+                            </div>
+                            <div class="cstat-item">
+                                <span class="cstat-label"><span class="t-en">Groups</span><span class="t-ar">مجموعات</span></span>
+                                <strong id="cs-groups">0</strong>
+                            </div>
+                            <div class="cstat-item">
+                                <span class="cstat-label"><span class="t-en">Limit</span><span class="t-ar">الحد</span></span>
+                                <strong id="cs-limit">/ 10000</strong>
+                            </div>
+                        </div>
+
+                        <!-- Toolbar -->
+                        <div class="contacts-toolbar">
+                            <input id="contacts-search" type="text"
+                                data-en-placeholder="Search name or phone…"
+                                data-ar-placeholder="بحث بالاسم أو الرقم…"
+                                placeholder="Search…" class="search-input" />
+                            <select id="contacts-filter" class="filter-select">
+                                <option value="all"><span class="t-en">All</span></option>
+                                <option value="active">Active / نشط</option>
+                                <option value="inactive">Inactive / غير نشط</option>
+                                <option value="sent">Sent / أُرسل</option>
+                                <option value="unsent">Never Sent / لم يُرسل</option>
+                            </select>
+                            <select id="contacts-group-filter" class="filter-select">
+                                <option value="">All Groups / كل المجموعات</option>
+                            </select>
+                            <div class="toolbar-buttons">
+                                <button id="btn-add-contact" type="button" class="primary-button">
+                                    <span class="t-en">+ Add</span><span class="t-ar">+ إضافة</span>
+                                </button>
+                                <button id="btn-bulk-delete" type="button" class="danger-button" disabled>
+                                    <span class="t-en">Delete Selected</span><span class="t-ar">حذف المحدد</span>
+                                </button>
+                                <button id="btn-bulk-schedule" type="button" disabled>
+                                    <span class="t-en">Schedule Selected</span><span class="t-ar">جدولة المحدد</span>
+                                </button>
+                                <button id="btn-export-csv" type="button">
+                                    <span class="t-en">Export CSV</span><span class="t-ar">تصدير CSV</span>
+                                </button>
+                                <button id="btn-export-json" type="button">
+                                    <span class="t-en">Export JSON</span><span class="t-ar">تصدير JSON</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Drag & Drop import zone -->
+                        <div id="contacts-drop-zone" class="drop-zone">
+                            <span class="t-en">📎 Drag &amp; Drop Excel / CSV / JSON here, or</span>
+                            <span class="t-ar">📎 اسحب وأفلت ملف Excel / CSV / JSON هنا، أو</span>
+                            <label class="file-trigger" for="contacts-file">
+                                <span class="t-en">Choose File</span><span class="t-ar">اختر ملف</span>
+                            </label>
+                            <input id="contacts-file" type="file" accept=".json,.csv,.xlsx,.xls" hidden />
+                        </div>
+
+                        <!-- Select-all row -->
+                        <div id="contacts-count-row" class="contacts-count-row">
+                            <label class="select-all-label">
+                                <input type="checkbox" id="contacts-select-all" />
+                                <span class="t-en">Select All</span><span class="t-ar">تحديد الكل</span>
+                            </label>
+                            <span id="contacts-count" class="badge neutral">0</span>
+                            <span id="contacts-selected-count" class="badge warning" hidden>0 selected</span>
+                        </div>
+
+                        <!-- Contact grid -->
+                        <div id="contacts-list" class="contacts-grid"></div>
+
+                        <!-- Sent numbers (collapsed sub-panel) -->
+                        <details class="sent-sub-panel" open>
+                            <summary>
+                                <span class="t-en">Sent Numbers</span>
+                                <span class="t-ar">الأرقام المرسلة</span>
+                                <span id="sent-count" class="badge neutral">0</span>
+                            </summary>
+                            <div id="sent-list" class="scroll-list mt-2"></div>
+                        </details>
+
+                    </div>
+                </details>
+            </section>
+
+            <section class="agent-side freelance-side">
+                <article class="conversation-panel hero-panel">
+                    <div class="conversation-head">
+                        <div>
+                            <div class="agent-kicker">
+                                <span class="t-en">Freelance Agent</span>
+                                <span class="t-ar">وكيل الفريلانس</span>
+                            </div>
+                            <h2>
+                                <span class="t-en">Scout, Sites, Portfolio..</span>
+                                <span class="t-ar">البحث، المواقع، البورتفوليو..</span>
+                            </h2>
+                            <p id="freelance-summary">Loading freelance workspace...</p>
+                        </div>
+                        <div class="head-statuses">
+                            <span id="freelance-status-pill" class="badge neutral">Loading</span>
+                            <span id="freelance-jobs-pill" class="badge neutral">Loading</span>
+                            <button id="freelance-settings-btn" type="button" title="Freelance Settings">⚙️</button>
+                            <button id="run-scout" type="button">
+                                <span class="t-en">Scout Now</span><span class="t-ar">ابحث الآن</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div id="freelance-conversation" class="conversation-stream"></div>
+
+                    <div class="quick-commands">
+                        <span>status</span>
+                        <span>jobs</span>
+                        <span>sites today</span>
+                        <span>set sites...</span>
+                        <span>set keywords QS, BOQ...</span>
+                        <span>use this portfolio</span>
+                    </div>
+
+                    <div id="freelance-upload-state" class="upload-state">
+                        <span class="t-en">No attachment selected</span>
+                        <span class="t-ar">لا يوجد مرفق</span>
+                    </div>
+
+                    <form id="freelance-chat-form" class="conversation-form">
+                        <textarea id="freelance-chat-input" rows="2" 
+                            data-en-placeholder="Tell the freelance agent what to search, where to search, or upload portfolio/voice" 
+                            data-ar-placeholder="أخبر وكيل الفريلانس ماذا يبحث وأين يبحث أو ارفع بورتفوليو/صوت"
+                            placeholder="Tell the freelance agent..."></textarea>
+                        <div class="conversation-toolbar">
+                            <input id="freelance-file-input" type="file" hidden />
+                            <button id="freelance-attach-button" type="button">
+                                <span class="t-en">Attach</span><span class="t-ar">إرفاق</span>
+                            </button>
+                            <button id="freelance-voice-button" type="button">
+                                <span class="t-en">Voice</span><span class="t-ar">صوت</span>
+                            </button>
+                            <button id="freelance-clear-upload" type="button">
+                                <span class="t-en">Clear</span><span class="t-ar">مسح</span>
+                            </button>
+                            <button id="freelance-clear-conversation" type="button" class="danger-button" title="Clear conversation history">
+                                <span class="t-en">🗑 Clear Chat</span><span class="t-ar">🗑 مسح المحادثة</span>
+                            </button>
+                            <button id="freelance-send-button" type="submit" class="primary-button">
+                                <span class="t-en">Send</span><span class="t-ar">إرسال</span>
+                            </button>
+                        </div>
+                    </form>
+                </article>
+
+                <details class="collapse-panel mt-3">
+                    <summary>
+                        <span class="t-en">Freelance Control &amp; Stats</span>
+                        <span class="t-ar">تحكم وإحصائيات الفريلانس</span>
+                    </summary>
+                    <div class="collapse-content info-panel">
+                        <div class="panel-title-row">
+                            <h3>
+                                <span class="t-en">Dashboard</span>
+                                <span class="t-ar">لوحة التحكم الداخلي</span>
+                            </h3>
+                            <button id="open-freelance-dashboard" type="button">
+                                <span class="t-en">Open Page</span><span class="t-ar">فتح الصفحة</span>
+                            </button>
+                        </div>
+                        <div class="stat-list mt-2">
+                            <div class="stat-item">
+                                <span><span class="t-en">Total Jobs</span><span class="t-ar">الجملة</span></span>
+                                <strong id="freelance-total">0</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Unsent Jobs</span><span class="t-ar">غير مرسلة</span></span>
+                                <strong id="freelance-unsent">0</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Sent Jobs</span><span class="t-ar">مرسلة</span></span>
+                                <strong id="freelance-sent">0</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Ready Proposals</span><span class="t-ar">جاهزة</span></span>
+                                <strong id="freelance-ready">0</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Ignored</span><span class="t-ar">متجاهلة</span></span>
+                                <strong id="freelance-ignored">0</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Location</span><span class="t-ar">الموقع</span></span>
+                                <strong id="freelance-location">-</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Tomorrow Sites</span><span class="t-ar">مواقع الغد</span></span>
+                                <strong id="freelance-sites">-</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Searched Today</span><span class="t-ar">بحث اليوم</span></span>
+                                <strong id="freelance-sites-today">-</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Keywords</span><span class="t-ar">الكلمات</span></span>
+                                <strong id="freelance-keywords">-</strong>
+                            </div>
+                            <div class="stat-item">
+                                <span><span class="t-en">Portfolio</span><span class="t-ar">البورتفوليو</span></span>
+                                <strong id="freelance-portfolio">-</strong>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+
+                <article class="info-panel sub-panel mt-3">
+                    <div class="panel-title-row">
+                        <h3>
+                            <span class="t-en">Recent Opportunities</span>
+                            <span class="t-ar">أحدث الفرص</span>
+                        </h3>
+                        <span id="jobs-count" class="badge neutral">0</span>
+                    </div>
+                    <div id="freelance-jobs" class="scroll-list tall"></div>
+                </article>
+            </section>
         </section>
 
-        <section class="grid cards">
-            <article class="card"><h2>Connection | الاتصال</h2><span id="whatsapp-pill" class="pill skeleton">Loading</span><div id="whatsapp-status" class="value">...</div><div id="whatsapp-detail" class="muted">Waiting for status</div><div id="whatsapp-foot" class="foot">No session data yet.</div></article>
-            <article class="card"><h2>Contacts | جهات الاتصال</h2><div id="contacts-active" class="value">0</div><div class="muted">Active contacts (نشطة)</div><div id="contacts-foot" class="foot">0 total contacts</div></article>
-            <article class="card"><h2>Today's Logs | سجلات اليوم</h2><div id="logs-total" class="value">0</div><div class="muted">Rows written today (سجلات اليوم)</div><div id="logs-foot" class="foot">0 sent, 0 failed</div></article>
-            <article class="card"><h2>Current Blast | الإرسال الجماعي</h2><span id="blast-pill" class="pill skeleton">Loading</span><div id="blast-progress" class="value">0 / 0</div><div id="blast-detail" class="muted">No blast activity yet (لا يوجد إرسال حالياً)</div><div id="blast-foot" class="foot">Success 0, failed 0</div></article>
-            <article class="card"><h2>Manager Agent | المدير الذكي</h2><span id="manager-pill" class="pill skeleton">Loading</span><div id="manager-status" class="value">...</div><div id="manager-detail" class="muted">Waiting for agent status</div><div id="manager-foot" class="foot">No manager activity yet.</div></article>
-            <article class="card"><h2>Health | حالة النظام</h2><span id="health-pill" class="pill skeleton">Loading</span><div id="health-status" class="value">...</div><div id="health-detail" class="muted">Waiting for diagnostics</div><div id="health-foot" class="foot">No health issues detected yet.</div></article>
-        </section>
+        <div id="workspace-errors" class="workspace-errors" hidden></div>
 
-        <section class="grid split">
-            <article class="card">
-                <h2>Control Center | مركز التحكم</h2>
-                <div id="controls-state" class="chip">Ready (جاهز)</div>
-                <p class="muted">Local-only actions for the running bot.<br><span style="font-size:0.9em">الإجراءات اليدوية للروبوت المحلي.</span></p>
-                <div class="buttons">
-                    <button id="run-blast" class="primary" type="button">Run Blast (بدء الإرسال)</button>
-                    <button id="refresh-now" type="button">Refresh (تحديث)</button>
-                    <button id="copy-url" type="button">Copy URL (نسخ الرابط)</button>
+        <!-- ===== MODALS ===== -->
+
+        <!-- Add / Edit Contact Modal -->
+        <div id="modal-contact" class="modal-overlay" hidden>
+            <div class="modal-box" role="dialog" aria-modal="true">
+                <h3 id="modal-contact-title">
+                    <span class="t-en">Add Contact</span><span class="t-ar">إضافة جهة اتصال</span>
+                </h3>
+                <label class="modal-label">
+                    <span class="t-en">Name</span><span class="t-ar">الاسم</span>
+                    <input id="modal-contact-name" type="text" />
+                </label>
+                <label class="modal-label">
+                    <span class="t-en">Phone (e.g. 971501234567)</span><span class="t-ar">الرقم (مثال: 971501234567)</span>
+                    <input id="modal-contact-phone" type="text" />
+                </label>
+                <label class="modal-label">
+                    <span class="t-en">Group</span><span class="t-ar">المجموعة</span>
+                    <input id="modal-contact-group" type="text"
+                        data-en-placeholder="e.g. Clients, Friends…"
+                        data-ar-placeholder="مثال: عملاء، أصدقاء…"
+                        placeholder="Group (optional)" />
+                </label>
+                <label class="modal-label modal-label-inline">
+                    <input type="checkbox" id="modal-contact-active" checked />
+                    <span class="t-en">Active</span><span class="t-ar">نشط</span>
+                </label>
+                <div class="modal-actions">
+                    <button id="modal-contact-save" type="button" class="primary-button">
+                        <span class="t-en">Save</span><span class="t-ar">حفظ</span>
+                    </button>
+                    <button id="modal-contact-cancel" type="button">
+                        <span class="t-en">Cancel</span><span class="t-ar">إلغاء</span>
+                    </button>
                 </div>
-                <div class="foot">Manual runs are accepted only from the local machine.</div>
-            </article>
-            <article class="card">
-                <h2>Message Preview | معاينة الرسالة</h2>
-                <div id="template-source" class="chip">Template (القالب)</div>
-                <div class="box"><strong>Template (النص الأساسي)</strong><pre id="template-raw">Loading template...</pre></div>
-                <div class="box"><strong>Rendered Preview (المعاينة النهائية)</strong><pre id="template-rendered">Loading preview...</pre></div>
-                <div id="template-variables" class="foot">Variables loading...</div>
-            </article>
-        </section>
+            </div>
+        </div>
 
-        <section class="grid split">
-            <article class="card">
-                <h2>Scheduler | المشرف الزمني</h2>
-                <span id="scheduler-pill" class="pill skeleton">Loading</span>
-                <div class="kv-grid">
-                    <div class="box"><strong>Send Time (وقت الإرسال)</strong><span id="scheduler-send-time">--:--</span></div>
-                    <div class="box"><strong>Cron (نمط الجدولة)</strong><span id="scheduler-cron" class="code">-</span></div>
-                    <div class="box"><strong>Next Run (التشغيل القادم)</strong><span id="scheduler-next-run">Unknown</span></div>
-                    <div class="box"><strong>Last Trigger (آخر تشغيل)</strong><span id="scheduler-last-run">None yet</span></div>
+        <!-- Direct Send Modal -->
+        <div id="modal-send" class="modal-overlay" hidden>
+            <div class="modal-box" role="dialog" aria-modal="true">
+                <h3>
+                    <span class="t-en">Send Message</span><span class="t-ar">إرسال رسالة</span>
+                </h3>
+                <p id="modal-send-phone-display" class="modal-phone-display"></p>
+                <label class="modal-label">
+                    <span class="t-en">Message</span><span class="t-ar">الرسالة</span>
+                    <textarea id="modal-send-message" rows="4"
+                        data-en-placeholder="Type your message…"
+                        data-ar-placeholder="اكتب رسالتك…"
+                        placeholder="Message…"></textarea>
+                </label>
+                <div class="modal-attach-row">
+                    <input id="modal-send-file" type="file" hidden />
+                    <button id="modal-send-attach-btn" type="button">
+                        <span class="t-en">📎 Attach</span><span class="t-ar">📎 إرفاق</span>
+                    </button>
+                    <span id="modal-send-attach-name" class="attach-name"></span>
+                    <button id="modal-send-attach-clear" type="button" hidden>✕</button>
                 </div>
-            </article>
-            <article class="card">
-                <h2>Runtime Config | إعدادات التشغيل</h2>
-                <div class="kv-grid">
-                    <div class="box"><strong>Timezone (المنطقة الزمنية)</strong><span id="config-timezone">-</span></div>
-                    <div class="box"><strong>Range (حجم الإرسال)</strong><span id="config-range">0-0</span></div>
-                    <div class="box"><strong>Delay (الหน่วง)</strong><span id="config-delay">0-0s</span></div>
-                    <div class="box"><strong>Browser (المتصفح)</strong><span id="config-browser">-</span></div>
-                    <div class="box"><strong>Session Path (مسار الجلسة)</strong><span id="config-session" class="code">-</span></div>
-                    <div class="box"><strong>Uptime (مدة التشغيل)</strong><span id="config-uptime">0s</span></div>
+                <div class="modal-actions">
+                    <button id="modal-send-submit" type="button" class="primary-button">
+                        <span class="t-en">Send</span><span class="t-ar">إرسال</span>
+                    </button>
+                    <button id="modal-send-cancel" type="button">
+                        <span class="t-en">Cancel</span><span class="t-ar">إلغاء</span>
+                    </button>
                 </div>
-            </article>
-        </section>
+            </div>
+        </div>
 
-        <section class="grid split">
-            <article class="card">
-                <h2>Scan QR If Needed | مسح الكود عند الحاجة</h2>
-                <div class="qr-grid">
-                    <div id="qr-slot" class="empty">If the session expires, the login QR will appear here automatically.<br>(سيظهر رمز الدخول هنا تلقائياً عند الحاجة)</div>
-                    <div>
-                        <div id="qr-title" class="value small">Session connected</div>
-                        <div id="qr-detail" class="muted">The dashboard will switch to scan mode whenever WhatsApp requests a new QR.</div>
-                        <div id="qr-foot" class="foot">No QR currently required.</div>
+        <!-- Import Preview Modal -->
+        <div id="modal-preview" class="modal-overlay" hidden>
+            <div class="modal-box modal-box-wide" role="dialog" aria-modal="true">
+                <h3>
+                    <span class="t-en">Preview Import</span><span class="t-ar">معاينة الاستيراد</span>
+                </h3>
+                <div id="modal-preview-stats" class="preview-stats"></div>
+                <div id="modal-preview-list" class="preview-list"></div>
+                <div class="modal-actions">
+                    <button id="modal-preview-import" type="button" class="primary-button">
+                        <span class="t-en">Import All</span><span class="t-ar">استيراد الكل</span>
+                    </button>
+                    <button id="modal-preview-cancel" type="button">
+                        <span class="t-en">Cancel</span><span class="t-ar">إلغاء</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Schedule Modal -->
+        <div id="modal-schedule" class="modal-overlay" hidden>
+            <div class="modal-box" role="dialog" aria-modal="true">
+                <h3>
+                    <span class="t-en">Schedule Message</span><span class="t-ar">جدولة رسالة</span>
+                </h3>
+                <p id="modal-schedule-phones-display" class="modal-phone-display"></p>
+                <label class="modal-label">
+                    <span class="t-en">Message</span><span class="t-ar">الرسالة</span>
+                    <textarea id="modal-schedule-message" rows="4"
+                        data-en-placeholder="Type your message…"
+                        data-ar-placeholder="اكتب رسالتك…"
+                        placeholder="Message…"></textarea>
+                </label>
+                <label class="modal-label">
+                    <span class="t-en">Date &amp; Time</span><span class="t-ar">التاريخ والوقت</span>
+                    <input id="modal-schedule-time" type="datetime-local" />
+                </label>
+                <div class="modal-actions">
+                    <button id="modal-schedule-save" type="button" class="primary-button">
+                        <span class="t-en">Schedule</span><span class="t-ar">جدولة</span>
+                    </button>
+                    <button id="modal-schedule-cancel" type="button">
+                        <span class="t-en">Cancel</span><span class="t-ar">إلغاء</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scheduled Messages Panel -->
+        <div id="scheduled-panel" class="scheduled-panel" hidden>
+            <div class="scheduled-header">
+                <h3>
+                    <span class="t-en">Scheduled Messages</span><span class="t-ar">الرسائل المجدولة</span>
+                </h3>
+                <button id="scheduled-panel-close" type="button">✕</button>
+            </div>
+            <div id="scheduled-list" class="scheduled-list"></div>
+        </div>
+
+        <!-- Freelance Settings Modal -->
+        <div id="modal-freelance-settings" class="modal-overlay" hidden>
+            <div class="modal-box modal-settings-box" role="dialog" aria-modal="true">
+                <h3>⚙️ <span class="t-en">Freelance Settings</span><span class="t-ar">إعدادات الفريلانس</span></h3>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label class="modal-label" for="fset-keywords">
+                            <span class="t-en">Search Keywords</span><span class="t-ar">كلمات البحث</span>
+                        </label>
+                        <textarea id="fset-keywords" rows="4" class="modal-input"
+                            data-en-placeholder='QS OR &quot;Quantity Surveyor&quot; OR BOQ…'
+                            data-ar-placeholder='مثال: QS OR &quot;Quantity Surveyor&quot; OR BOQ'
+                            placeholder='QS OR "Quantity Surveyor" OR BOQ…'></textarea>
+                        <small class="form-hint">Use OR between keywords, wrap phrases in &quot;quotes&quot;</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="modal-label" for="fset-location">
+                            <span class="t-en">Location</span><span class="t-ar">الموقع</span>
+                        </label>
+                        <input id="fset-location" type="text" class="modal-input"
+                            data-en-placeholder="e.g. United Arab Emirates"
+                            data-ar-placeholder="مثال: الإمارات العربية المتحدة"
+                            placeholder="e.g. United Arab Emirates" />
+                    </div>
+                    <div class="form-group">
+                        <label class="modal-label" for="fset-sites">
+                            <span class="t-en">Search Sites</span><span class="t-ar">مواقع البحث</span>
+                        </label>
+                        <textarea id="fset-sites" rows="4" class="modal-input"
+                            data-en-placeholder="upwork.com, fiverr.com, freelancer.com…"
+                            data-ar-placeholder="upwork.com, fiverr.com, freelancer.com…"
+                            placeholder="upwork.com, fiverr.com, freelancer.com…"></textarea>
+                        <small class="form-hint">Comma-separated list of sites to search</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="modal-label" for="fset-profile">
+                            <span class="t-en">Search Profile / Title</span><span class="t-ar">الملف الشخصي / العنوان</span>
+                        </label>
+                        <input id="fset-profile" type="text" class="modal-input"
+                            data-en-placeholder="e.g. Senior Quantity Surveyor"
+                            data-ar-placeholder="مثال: مهندس كميات أول"
+                            placeholder="e.g. Senior Quantity Surveyor" />
+                    </div>
+                    <div class="form-group">
+                        <label class="modal-label" for="fset-portfolio">
+                            <span class="t-en">Portfolio Path</span><span class="t-ar">مسار البورتفوليو</span>
+                        </label>
+                        <input id="fset-portfolio" type="text" class="modal-input"
+                            data-en-placeholder="Path to portfolio file…"
+                            data-ar-placeholder="مسار ملف البورتفوليو…"
+                            placeholder="Path to portfolio file…" />
                     </div>
                 </div>
-            </article>
-            <article class="card">
-                <h2>Health Issues | مشاكل النظام</h2>
-                <div id="issues-count" class="chip">0 issues</div>
-                <div id="issues" class="list"></div>
-            </article>
-        </section>
+                <div class="modal-actions">
+                    <button id="fset-save" type="button" class="primary-button">
+                        <span class="t-en">Save</span><span class="t-ar">حفظ</span>
+                    </button>
+                    <button id="fset-reset-defaults" type="button">
+                        <span class="t-en">Reset Defaults</span><span class="t-ar">إعادة الافتراضي</span>
+                    </button>
+                    <button id="fset-cancel" type="button">
+                        <span class="t-en">Cancel</span><span class="t-ar">إلغاء</span>
+                    </button>
+                </div>
+            </div>
+        </div>
 
-        <section class="grid split">
-            <article class="card">
-                <h2>Recent Activity | النشاط الأخير</h2>
-                <div id="events" class="list"></div>
-            </article>
-            <article class="card">
-                <h2>Recent Message Logs | سجل الرسائل الحديثة</h2>
-                <div id="logs-refresh" class="chip">Auto-refreshing (تحديث تلقائي)</div>
-                <div id="recent-logs" class="list"></div>
-                <div id="data-errors" class="errors" hidden></div>
-            </article>
-        </section>
+        <!-- Settings Modal -->
+        <div id="modal-settings" class="modal-overlay" hidden>
+            <div class="modal-box modal-settings-box" role="dialog" aria-modal="true">
+                <h3>⚙️ <span class="t-en">Settings</span><span class="t-ar">الإعدادات</span></h3>
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label class="modal-label" for="set-app-name">
+                            <span class="t-en">App Name</span><span class="t-ar">اسم التطبيق</span>
+                        </label>
+                        <input id="set-app-name" type="text" class="modal-input" maxlength="80"
+                            data-en-placeholder="e.g. W&amp;F Workspace"
+                            data-ar-placeholder="مثال: مساحة عمل W&amp;F"
+                            placeholder="e.g. W&F Workspace" />
+                    </div>
+                    <div class="form-group">
+                        <label class="modal-label" for="set-message">
+                            <span class="t-en">Message Template</span><span class="t-ar">نص الرسالة</span>
+                        </label>
+                        <textarea id="set-message" rows="6" class="modal-input"
+                            data-en-placeholder="Hello ${name}! Message here…"
+                            data-ar-placeholder="مرحبا ${name}! الرسالة هنا…"
+                            placeholder="Hello ${name}! Message here…"></textarea>
+                        <small class="form-hint">Use <code>${name}</code> for contact name</small>
+                    </div>
+                    <div class="settings-row">
+                        <div class="form-group">
+                            <label class="modal-label" for="set-send-time">
+                                <span class="t-en">Schedule Time</span><span class="t-ar">وقت الجدولة</span>
+                            </label>
+                            <input id="set-send-time" type="time" class="modal-input" />
+                        </div>
+                        <div class="form-group">
+                            <label class="modal-label">
+                                <span class="t-en">Range (min – max)</span><span class="t-ar">النطاق (أدنى – أقصى)</span>
+                            </label>
+                            <div class="range-row">
+                                <input id="set-min" type="number" class="modal-input" min="1" max="9999" placeholder="30" />
+                                <span class="range-sep">–</span>
+                                <input id="set-max" type="number" class="modal-input" min="1" max="9999" placeholder="40" />
+                            </div>
+                        </div>
+                    </div>
+                    <label class="toggle-row">
+                        <input id="set-schedule-enabled" type="checkbox" />
+                        <span class="t-en">Enable Auto-Schedule</span>
+                        <span class="t-ar">تفعيل الجدولة التلقائية</span>
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button id="settings-save" type="button" class="primary-button">
+                        <span class="t-en">Save</span><span class="t-ar">حفظ</span>
+                    </button>
+                    <button id="settings-cancel" type="button">
+                        <span class="t-en">Cancel</span><span class="t-ar">إلغاء</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== TOAST CONTAINER ===== -->
+        <div id="toast-container" class="toast-container" aria-live="polite"></div>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.getElementById('lang-toggle-btn');
+            let currentLang = localStorage.getItem('dashboard_lang') || 'en';
+            
+            function setLang(lang) {
+                document.body.className = 'lang-' + lang;
+                document.documentElement.lang = lang;
+                localStorage.setItem('dashboard_lang', lang);
+                
+                document.querySelectorAll('[data-en-placeholder]').forEach(el => {
+                    el.placeholder = el.getAttribute('data-' + lang + '-placeholder');
+                });
+            }
+            
+            setLang(currentLang);
+            
+            toggleBtn.addEventListener('click', () => {
+                currentLang = currentLang === 'en' ? 'ar' : 'en';
+                setLang(currentLang);
+            });
+        });
+    </script>
+    <script src="/xlsx.js"></script>
     <script src="/dashboard.js"></script>
 </body>
 </html>

@@ -7,3 +7,4 @@ storage
 .wwebjs_auth
 .wwebjs_cache
 .git
+deploy_out.txt

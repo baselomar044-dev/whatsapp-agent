@@ -1,6 +1,7 @@
 const cron = require('node-cron');
 const { appConfig } = require('./config');
-const { getActiveContacts, getMessageTemplate, getAppSetting, upsertAppSetting } = require('./database');
+const { getActiveContacts, getAppSetting, getAutomationSettings, upsertAppSetting } = require('./database');
+const { normalizeSendTime } = require('./config');
 const { renderMessageTemplate } = require('./message-template');
 const { sendMessage } = require('./whatsapp');
 const {
@@ -51,14 +52,14 @@ function sortByLeastRecentlyMessaged(contacts) {
     });
 }
 
-function calculateCountToSend(totalContacts) {
+function calculateCountToSend(totalContacts, automationSettings) {
     if (totalContacts <= 0) {
         return 0;
     }
 
     const target = Math.floor(
-        Math.random() * (appConfig.maxMessages - appConfig.minMessages + 1)
-    ) + appConfig.minMessages;
+        Math.random() * (automationSettings.maxMessages - automationSettings.minMessages + 1)
+    ) + automationSettings.minMessages;
 
     return Math.min(totalContacts, target);
 }
@@ -79,13 +80,14 @@ async function runBlast(trigger = 'manual') {
     let countToSend = 0;
     let successCount = 0;
     let blastStarted = false;
+    const automationSettings = await getAutomationSettings();
 
     console.log(`Starting ${trigger} message blast...`);
     markSchedulerTrigger(trigger);
 
     try {
         const contacts = await getActiveContacts();
-        countToSend = calculateCountToSend(contacts.length);
+        countToSend = calculateCountToSend(contacts.length, automationSettings);
 
         startBlast(countToSend, trigger);
         blastStarted = true;
@@ -108,7 +110,7 @@ async function runBlast(trigger = 'manual') {
             };
         }
 
-        const baseMessage = await getMessageTemplate();
+        const baseMessage = automationSettings.messageTemplate;
         const contactsToSend = selectContactsForBlast(contacts, countToSend);
 
         console.log(`Sending messages to ${contactsToSend.length} contacts today.`);
@@ -202,30 +204,49 @@ async function pollManualBlastTrigger() {
     }
 }
 
+async function configureScheduler() {
+    const automationSettings = await getAutomationSettings();
+    const sendTime = normalizeSendTime(automationSettings.sendTime, appConfig.sendTime);
+
+    if (automationSettings.scheduleEnabled) {
+        const [hour, minute] = sendTime.split(':');
+        const cronSchedule = `${minute} ${hour} * * *`;
+
+        console.log(`Scheduler set for ${sendTime} daily (Cron: ${cronSchedule})`);
+        setSchedulerState(sendTime, cronSchedule);
+
+        scheduledTask = cron.schedule(cronSchedule, () => {
+            runDailyBlast('scheduled').catch((error) => {
+                if (error.code === 'BLAST_ALREADY_RUNNING') {
+                    pushEvent('scheduler', 'Scheduled blast skipped because another blast is already running.', 'warn');
+                    return;
+                }
+
+                recordRuntimeError('blast', error);
+                console.error('Error in daily blast:', error);
+            });
+        });
+    } else {
+        setSchedulerState(sendTime, null);
+        pushEvent('scheduler', 'Automatic schedule is disabled. Manual runs remain available.');
+    }
+
+    manualTriggerInterval = setInterval(pollManualBlastTrigger, appConfig.manualTriggerPollMs);
+}
+
 function setupScheduler() {
     if (scheduledTask || manualTriggerInterval) {
         return;
     }
 
-    const [hour, minute] = appConfig.sendTime.split(':');
-    const cronSchedule = `${minute} ${hour} * * *`;
-
-    console.log(`Scheduler set for ${appConfig.sendTime} daily (Cron: ${cronSchedule})`);
-    setSchedulerState(appConfig.sendTime, cronSchedule);
-
-    scheduledTask = cron.schedule(cronSchedule, () => {
-        runDailyBlast('scheduled').catch((error) => {
-            if (error.code === 'BLAST_ALREADY_RUNNING') {
-                pushEvent('scheduler', 'Scheduled blast skipped because another blast is already running.', 'warn');
-                return;
-            }
-
-            recordRuntimeError('blast', error);
-            console.error('Error in daily blast:', error);
-        });
+    configureScheduler().catch((error) => {
+        recordRuntimeError('scheduler', error);
     });
+}
 
-    manualTriggerInterval = setInterval(pollManualBlastTrigger, appConfig.manualTriggerPollMs);
+async function reconfigureScheduler() {
+    stopScheduler();
+    await configureScheduler();
 }
 
 function stopScheduler() {
@@ -242,6 +263,7 @@ function stopScheduler() {
 
 module.exports = {
     isBlastRunning,
+    reconfigureScheduler,
     runDailyBlast,
     setupScheduler,
     stopScheduler
