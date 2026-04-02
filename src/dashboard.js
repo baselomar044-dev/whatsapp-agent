@@ -674,6 +674,29 @@ function startDashboardServer(deps = {}) {
                 return;
             }
 
+            if (pathname === '/api/freelance/portfolio-upload') {
+                if (request.method !== 'POST') {
+                    sendMethodNotAllowed(response);
+                    return;
+                }
+
+                const body = await readJsonBody(request);
+                if (!body.attachment || !body.attachment.data) {
+                    sendJson(response, 400, { error: 'No file data provided.' });
+                    return;
+                }
+
+                const attachmentRecord = createUploadedAttachment('portfolio', body.attachment);
+                if (!attachmentRecord) {
+                    sendJson(response, 400, { error: 'Failed to save attachment.' });
+                    return;
+                }
+
+                await upsertFreelanceSettings({ portfolio_path: attachmentRecord.absolutePath });
+                sendJson(response, 200, { saved: true, filename: attachmentRecord.filename, path: attachmentRecord.absolutePath });
+                return;
+            }
+
             sendJson(response, 404, { error: 'Not found' });
         } catch (error) {
             recordRuntimeError('dashboard', error);

@@ -762,22 +762,52 @@ async function exportContacts(format) {
 }
 
 // ── Freelance Settings modal ────────────────────────────────────────────
+let pendingPortfolioFile = null;
+
 function openFreelanceSettings() {
     $('fset-keywords').value = lastFreelanceData.keywords || '';
     $('fset-location').value = lastFreelanceData.location || '';
     $('fset-sites').value = (lastFreelanceData.searchSites || []).join(', ');
     $('fset-profile').value = lastFreelanceData.searchProfile || '';
-    $('fset-portfolio').value = lastFreelanceData.portfolioPath || '';
+    pendingPortfolioFile = null;
+    const hint = $('fset-portfolio-current');
+    if (hint) {
+        const current = lastFreelanceData.portfolioPath || '';
+        hint.textContent = current ? `Current: ${current.split(/[\\/]/).pop()}` : '';
+    }
+    const nameEl = $('fset-portfolio-filename');
+    if (nameEl) nameEl.innerHTML = '<span class="t-en">No file chosen</span><span class="t-ar">لم يُختر ملف</span>';
     $('modal-freelance-settings').hidden = false;
 }
 
 async function saveFreelanceSettings() {
+    // Upload portfolio file first if one was picked
+    if (pendingPortfolioFile) {
+        const b64 = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result.split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(pendingPortfolioFile);
+        });
+        await apiFetch('/api/freelance/portfolio-upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                attachment: {
+                    filename: pendingPortfolioFile.name,
+                    mimetype: pendingPortfolioFile.type || 'application/octet-stream',
+                    data: b64
+                }
+            })
+        });
+        pendingPortfolioFile = null;
+    }
+
     const payload = {
         search_keywords: $('fset-keywords').value.trim(),
         search_location: $('fset-location').value.trim(),
         search_sites: $('fset-sites').value.trim(),
-        search_profile: $('fset-profile').value.trim(),
-        portfolio_path: $('fset-portfolio').value.trim()
+        search_profile: $('fset-profile').value.trim()
     };
     await apiFetch('/api/freelance/settings', {
         method: 'POST',
@@ -795,7 +825,9 @@ function resetFreelanceDefaults() {
     $('fset-location').value = d.location || '';
     $('fset-sites').value = (d.searchSites || []).join(', ');
     $('fset-profile').value = '';
-    $('fset-portfolio').value = '';
+    pendingPortfolioFile = null;
+    const nameEl = $('fset-portfolio-filename');
+    if (nameEl) nameEl.innerHTML = '<span class="t-en">No file chosen</span><span class="t-ar">لم يُختر ملف</span>';
     toast('Fields reset to defaults (not saved yet).', 'info');
 }
 
@@ -1245,6 +1277,13 @@ $('freelance-settings-btn').addEventListener('click', openFreelanceSettings);
 $('fset-save').addEventListener('click', () => saveFreelanceSettings().catch((err) => toast(err.message, 'error')));
 $('fset-cancel').addEventListener('click', () => { $('modal-freelance-settings').hidden = true; });
 $('fset-reset-defaults').addEventListener('click', resetFreelanceDefaults);
+$('fset-portfolio-file').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    pendingPortfolioFile = file;
+    const nameEl = $('fset-portfolio-filename');
+    if (nameEl) nameEl.textContent = file.name;
+});
 
 // ── Export ─────────────────────────────────────────────────────────────
 $('btn-export-csv').addEventListener('click', () => {

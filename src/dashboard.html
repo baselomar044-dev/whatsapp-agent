@@ -621,13 +621,19 @@
                             placeholder="e.g. Senior Quantity Surveyor" />
                     </div>
                     <div class="form-group">
-                        <label class="modal-label" for="fset-portfolio">
-                            <span class="t-en">Portfolio Path</span><span class="t-ar">مسار البورتفوليو</span>
+                        <label class="modal-label">
+                            <span class="t-en">Portfolio File</span><span class="t-ar">ملف البورتفوليو</span>
                         </label>
-                        <input id="fset-portfolio" type="text" class="modal-input"
-                            data-en-placeholder="Path to portfolio file…"
-                            data-ar-placeholder="مسار ملف البورتفوليو…"
-                            placeholder="Path to portfolio file…" />
+                        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                            <label class="primary-button" style="cursor:pointer;margin:0">
+                                <span class="t-en">📎 Choose File</span><span class="t-ar">📎 اختر ملف</span>
+                                <input id="fset-portfolio-file" type="file" accept=".pdf,.xlsx,.xls,.doc,.docx" style="display:none" />
+                            </label>
+                            <span id="fset-portfolio-filename" style="font-size:0.85rem;opacity:0.75">
+                                <span class="t-en">No file chosen</span><span class="t-ar">لم يُختر ملف</span>
+                            </span>
+                        </div>
+                        <small id="fset-portfolio-current" class="form-hint" style="margin-top:4px"></small>
                     </div>
                 </div>
                 <div class="modal-actions">
