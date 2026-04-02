@@ -16,17 +16,31 @@ const {
     setWhatsAppQr
 } = require('./runtime-state');
 
-const puppeteerConfig = {
-    headless: appConfig.headless,
-    args: [
+const isWindows = process.platform === 'win32';
+const isLinux = process.platform === 'linux';
+const isContainer = Boolean(process.env.PUPPETEER_EXECUTABLE_PATH || process.env.CHROME_EXECUTABLE_PATH || process.env.RAILWAY_ENVIRONMENT);
+
+const puppeteerArgs = [
+    '--no-first-run',
+    '--no-default-browser-check'
+];
+
+if (isLinux || isContainer) {
+    puppeteerArgs.push(
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-gpu',
-        '--single-process',
-        '--no-first-run',
-        '--no-default-browser-check'
-    ]
+        '--disable-gpu'
+    );
+}
+
+if (!isWindows) {
+    puppeteerArgs.push('--single-process');
+}
+
+const puppeteerConfig = {
+    headless: appConfig.headless,
+    args: puppeteerArgs
 };
 
 // Use system Chrome if available, otherwise use what's in PATH
