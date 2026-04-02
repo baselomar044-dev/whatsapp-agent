@@ -27,20 +27,22 @@ const DEFAULT_QS_KEYWORDS = [
 const DEFAULT_SEARCH_LOCATION = 'United Arab Emirates';
 const DEFAULT_SEARCH_SITES = [
     'upwork.com',
-    'fiverr.com',
-    'freelancer.com',
     'peopleperhour.com',
-    'indeed.com',
-    'linkedin.com',
+    'freelancer.com',
+    'fiverr.com',
     'guru.com',
     'truelancer.com',
     'workana.com',
     'malt.com',
-    'bark.com',
     'ureed.com',
+    'linkedin.com',
+    'indeed.com',
     'worksome.com',
     'yunojuno.com',
-    'fieldengineer.com'
+    'fieldengineer.com',
+    'bark.com',
+    'designhill.com',
+    'kolabtree.com'
 ];
 
 let cachedClient = null;

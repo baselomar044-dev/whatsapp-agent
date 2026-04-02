@@ -489,31 +489,77 @@ function updateSelectionUI() {
 function renderJobs(freelance) {
     const jobs = freelance.recentJobs || [];
     $('jobs-count').textContent = `${jobs.length}`;
-    $('freelance-jobs').innerHTML = jobs.length
-        ? jobs.map((job) => `
-            <article class="list-card opportunity-card ${esc(job.actionState || 'new')}">
-                <div class="opportunity-topline">
-                    <strong>${esc(job.title || 'Untitled job')}</strong>
-                    <span class="job-state ${esc(job.actionState || 'new')}">${esc((job.actionState || 'new').replace(/_/g, ' '))}</span>
-                </div>
-                <div>${esc(job.company || 'Direct')} | ${esc(job.platform || 'Unknown')}</div>
-                <div class="meta">${esc(when(job.created_at))}</div>
-                <div class="job-summary"><strong><span class="t-en">Summary</span><span class="t-ar">الملخص</span></strong><div>${esc(job.summary || 'No summary')}</div></div>
-                <div class="job-fee"><strong><span class="t-en">Fee</span><span class="t-ar">الرسوم</span></strong><div>${esc(job.feePreview || 'Not specified')}</div></div>
-                ${job.job_url ? `<div class="meta"><a href="${esc(job.job_url)}" target="_blank" rel="noreferrer"><span class="t-en">Open link</span><span class="t-ar">افتح الرابط</span></a></div>` : ''}
-                ${job.suggested_proposal ? `
-                    <details class="proposal-preview">
-                        <summary><span class="t-en">Ready Proposal Preview</span><span class="t-ar">معاينة المقترح</span></summary>
-                        <div class="meta">${esc(String(job.suggested_proposal).slice(0, 420))}</div>
-                    </details>
-                ` : ''}
-                <div class="job-actions">
-                    <button type="button" class="danger-button" data-job-action="ignored" data-job-id="${esc(job.id)}"><span class="t-en">Ignore</span><span class="t-ar">تجاهل</span></button>
-                    <button type="button" class="primary-button" data-job-action="ready" data-job-id="${esc(job.id)}" ${job.proposalReady ? '' : 'disabled'}><span class="t-en">Ready Proposal</span><span class="t-ar">مقترح جاهز</span></button>
-                </div>
-            </article>
-        `).join('')
-        : '<article class="list-card"><strong><span class="t-en">No jobs yet</span><span class="t-ar">لا توجد وظائف بعد</span></strong></article>';
+
+    if (!jobs.length) {
+        $('freelance-jobs').innerHTML = '<article class="list-card"><strong><span class="t-en">No jobs yet — run Scout to find opportunities</span><span class="t-ar">لا توجد فرص بعد — شغّل Scout للبحث</span></strong></article>';
+        return;
+    }
+
+    $('freelance-jobs').innerHTML = jobs.map((job) => {
+        const state = job.actionState || 'new';
+        const isIgnored = state === 'ignored';
+        const isReady = state === 'ready';
+        const fee = job.feePreview && job.feePreview !== 'Not specified' ? job.feePreview : null;
+        const hasProposal = Boolean(job.suggested_proposal && String(job.suggested_proposal).trim());
+
+        return `<article class="list-card opportunity-card ${esc(state)}" data-job-id="${esc(job.id)}">
+            <div class="opportunity-topline">
+                <strong class="job-title">${esc(job.title || 'Untitled job')}</strong>
+                <span class="job-state-badge ${esc(state)}">${esc(state === 'ready' ? '✅ Ready' : state === 'ignored' ? '🗑 Rejected' : '🆕 New')}</span>
+            </div>
+            <div class="job-meta-row">
+                <span class="job-platform">${esc(job.platform || 'Unknown')}</span>
+                ${job.company ? `<span class="job-company">· ${esc(job.company)}</span>` : ''}
+                <span class="job-date">· ${esc(when(job.created_at))}</span>
+            </div>
+            ${fee ? `<div class="job-fee-badge">💰 ${esc(fee)}</div>` : ''}
+            <div class="job-summary-text">${esc(job.summary || 'No summary available.')}</div>
+            ${job.job_url ? `<a class="job-link-btn" href="${esc(job.job_url)}" target="_blank" rel="noreferrer">🔗 <span class="t-en">Open Job</span><span class="t-ar">افتح الفرصة</span></a>` : ''}
+            ${hasProposal ? `
+                <details class="proposal-preview">
+                    <summary>📄 <span class="t-en">Draft Proposal</span><span class="t-ar">مسودة المقترح</span></summary>
+                    <div class="proposal-text">${esc(String(job.suggested_proposal))}</div>
+                </details>
+            ` : ''}
+            <div class="job-actions">
+                <button type="button" class="reject-btn" data-job-action="ignored" data-job-id="${esc(job.id)}">
+                    🗑 <span class="t-en">Reject</span><span class="t-ar">رفض</span>
+                </button>
+                <button type="button" class="accept-btn ${isReady ? 'already-ready' : ''}" data-job-accept="${esc(job.id)}">
+                    ✅ <span class="t-en">${isReady ? 'Proposal Ready' : 'Accept & Draft Proposal'}</span><span class="t-ar">${isReady ? 'المقترح جاهز' : 'قبول وإعداد مقترح'}</span>
+                </button>
+            </div>
+        </article>`;
+    }).join('');
+}
+
+async function draftProposal(jobId) {
+    const jobs = (window._lastFreelanceJobs || []);
+    const job = jobs.find((j) => String(j.id) === String(jobId));
+    if (!job) { toast('Job not found', 'error'); return; }
+
+    const prompt = `Draft a professional proposal for this job:\n\nTitle: ${job.title}\nCompany: ${job.company || 'Not specified'}\nPlatform: ${job.platform}\nFee: ${job.feePreview || 'Not specified'}\nSummary: ${job.summary || ''}\nDescription: ${String(job.description || '').slice(0, 600)}\n\nWrite a tailored, compelling proposal using my profile and skills. Keep it concise (under 200 words), professional, and end with the trial offer.`;
+
+    // Mark as ready
+    await apiFetch('/api/freelance/jobs/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId, action: 'ready' })
+    });
+
+    // Send to freelance agent to generate proposal
+    toast('Drafting proposal...', 'info');
+    const res = await apiFetch('/api/freelance/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: prompt })
+    });
+    const data = await res.json();
+
+    // Show in conversation panel
+    renderConversation('freelance-conversation', data.history || []);
+    await refresh();
+    toast('Proposal drafted — check the chat above!', 'success');
 }
 
 async function setJobAction(jobId, action) {
@@ -571,6 +617,7 @@ function renderData(data) {
     updateContactStatsBar(data.contactsList || [], data.stats?.logsToday?.sent || 0);
 
     renderJobs(freelance);
+    window._lastFreelanceJobs = freelance.recentJobs || [];
     renderUploadState('whatsapp');
     renderUploadState('freelance');
 
@@ -1437,9 +1484,19 @@ $('open-freelance-dashboard').addEventListener('click', () => {
     if (url) window.open(url, '_blank', 'noopener,noreferrer');
 });
 $('freelance-jobs').addEventListener('click', (e) => {
-    const button = e.target.closest('[data-job-action]');
-    if (!button) return;
-    setJobAction(button.dataset.jobId, button.dataset.jobAction).catch((err) => { $('workspace-errors').hidden = false; $('workspace-errors').textContent = err.message; });
+    // Reject button
+    const rejectBtn = e.target.closest('[data-job-action]');
+    if (rejectBtn) {
+        setJobAction(rejectBtn.dataset.jobId, rejectBtn.dataset.jobAction)
+            .catch((err) => toast(err.message, 'error'));
+        return;
+    }
+    // Accept & Draft Proposal button
+    const acceptBtn = e.target.closest('[data-job-accept]');
+    if (acceptBtn) {
+        draftProposal(acceptBtn.dataset.jobAccept)
+            .catch((err) => toast(err.message, 'error'));
+    }
 });
 
 // ── Dark mode toggle ───────────────────────────────────────────────────
