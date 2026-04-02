@@ -5,6 +5,7 @@ const qrcode = require('qrcode-terminal');
 const { appConfig } = require('./config');
 const { logMessage, updateLastSent } = require('./database');
 const { normalizePhoneNumber, toWhatsAppId } = require('./phone');
+const { processIncomingMessage } = require('./adaptive-personality');
 const {
     markWhatsAppAuthenticated,
     markWhatsAppAuthFailure,
@@ -113,10 +114,8 @@ client.on('code', (code) => {
 });
 
 // ── Incoming messages from contacts ──────────────────────────────────
-// CRITICAL: Agent reads messages WITHOUT sending read receipt to sender
-// Read Receipts:
-//   - You (Basel): Normal - blue checkmark appears (your WhatsApp setting)
-//   - Sender: Sees message as UNREAD (bot doesn't ack)
+// INTELLIGENT AGENT: Reads, analyzes, decides whether/how to reply
+// Not a bot. Real logic. Real personality.
 client.on('message', async (msg) => {
     try {
         // Only log messages from individual chats (not groups, not from ourselves)
@@ -127,10 +126,6 @@ client.on('message', async (msg) => {
         const rawPhone = String(msg.from || '').replace('@c.us', '').replace(/[^\d]/g, '');
         if (!rawPhone) return;
 
-        // 🔇 SILENT MODE: Read message data WITHOUT sending acknowledgment
-        // We extract: text, media, timestamps, etc
-        // But we NEVER call msg.ack() - this prevents blue checkmark being sent to sender
-        
         const messageId = msg.id?._serialized || 'unknown';
         let body = msg.body || '[message]';
         let mediaInfo = '';
@@ -170,18 +165,30 @@ client.on('message', async (msg) => {
         // Log to database (your logs only)
         await logMessage(rawPhone, 'received', body.slice(0, 500), new Date().toISOString());
         
-        // Console output for your monitoring - detailed report
-        console.log(`\n${'═'.repeat(70)}`);
-        console.log(`🔇 [SILENT READ] ${messageId}`);
-        console.log(`   From: ${rawPhone}`);
-        if (mediaInfo) {
-            console.log(`   Type: ${mediaInfo}`);
+        // 🧠 ADAPTIVE ANALYSIS: Process with intelligence, not robotics
+        const decision = await processIncomingMessage(body, rawPhone);
+
+        if (decision.shouldReply && decision.response) {
+            // Natural, intelligent reply
+            console.log(`\n📤 Sending response to ${rawPhone}...`);
+            const formattedPhone = toWhatsAppId(rawPhone);
+            
+            try {
+                await msg.reply(decision.response);
+                console.log(`✅ Response sent naturally\n`);
+                
+                // Log the exchange
+                await logMessage(rawPhone, 'sent', decision.response, new Date().toISOString());
+            } catch (replyErr) {
+                console.error(`❌ Failed to reply: ${replyErr.message}\n`);
+            }
+        } else {
+            // Silent but logged
+            console.log(`\n🤐 Message read silently. Stored in logs.\n`);
         }
-        console.log(`   Content: ${body.slice(0, 100)}`);
-        console.log(`   ✓ UNREAD for sender (no blue checkmark sent)`);
-        console.log(`${'═'.repeat(70)}\n`);
+
     } catch (err) {
-        console.error('Failed to log incoming message:', err.message);
+        console.error('Failed to process incoming message:', err.message);
     }
 });
 
