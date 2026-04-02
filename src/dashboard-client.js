@@ -132,26 +132,71 @@ function renderConversation(targetId, history) {
 let _lastQrUrl = '';
 function renderQr(whatsapp) {
     const slot = $('qr-slot');
+    const pairingSection = document.querySelector('.pairing-section');
+    const pairResult = $('pair-result');
     if (!slot) return;
+
+    const status = whatsapp.status || 'unknown';
+    const isConnected = status === 'ready' || status === 'authenticated';
+    const needsQr = status === 'qr_required' || status === 'initializing' || status === 'disconnected' || status === 'auth_failure';
     const url = whatsapp.qrUrl || '';
-    if (url && url !== _lastQrUrl) {
-        _lastQrUrl = url;
-        slot.innerHTML = `<img src="${esc(url)}" alt="WhatsApp QR" /><p style="margin:0.5rem 0 0;font-size:0.75rem;color:var(--text-secondary)">Open WhatsApp → Linked Devices → Scan this code</p>`;
-    } else if (!url && _lastQrUrl) {
+
+    // ── Connected state: clean success display ──
+    if (isConnected) {
         _lastQrUrl = '';
-        slot.textContent = 'QR will appear here when needed.';
+        slot.innerHTML = `<div class="wa-connected-badge">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--success, #22c55e)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+            <div style="margin-top:0.5rem;font-weight:600;color:var(--success, #22c55e);">
+                <span class="t-en">WhatsApp Connected</span>
+                <span class="t-ar">واتساب متصل</span>
+            </div>
+            <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem;">
+                <span class="t-en">Ready since ${esc(when(whatsapp.readyAt || whatsapp.authenticatedAt))}</span>
+                <span class="t-ar">جاهز منذ ${esc(when(whatsapp.readyAt || whatsapp.authenticatedAt))}</span>
+            </div>
+        </div>`;
+        if (pairingSection) pairingSection.style.display = 'none';
+        if (pairResult) { pairResult.style.display = 'none'; pairResult.innerHTML = ''; }
     }
-    $('wa-availability').textContent = whatsapp.status || 'unknown';
-    $('wa-connection-text').textContent = (whatsapp.status || 'unknown').replace(/_/g, ' ');
+    // ── Needs QR: show QR + pairing ──
+    else if (needsQr) {
+        if (url && url !== _lastQrUrl) {
+            _lastQrUrl = url;
+            slot.innerHTML = `<img src="${esc(url)}" alt="WhatsApp QR" /><p style="margin:0.5rem 0 0;font-size:0.75rem;color:var(--text-secondary)"><span class="t-en">Open WhatsApp → Linked Devices → Scan this code</span><span class="t-ar">افتح واتساب ← الأجهزة المرتبطة ← امسح هذا الرمز</span></p>`;
+        } else if (!url) {
+            _lastQrUrl = '';
+            slot.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--text-secondary);font-size:0.85rem;">
+                <span class="t-en">Waiting for QR code...</span>
+                <span class="t-ar">بانتظار رمز QR...</span>
+            </div>`;
+        }
+        if (pairingSection) pairingSection.style.display = '';
+    }
+    // ── Other states (loading, unknown) ──
+    else {
+        _lastQrUrl = '';
+        slot.innerHTML = `<div style="padding:1.5rem;text-align:center;color:var(--text-secondary);font-size:0.85rem;">
+            <span class="t-en">Initializing WhatsApp...</span>
+            <span class="t-ar">جاري تهيئة واتساب...</span>
+        </div>`;
+        if (pairingSection) pairingSection.style.display = 'none';
+    }
+
+    // ── Status badges ──
+    const badge = $('wa-availability');
+    if (badge) {
+        badge.textContent = status.replace(/_/g, ' ');
+        badge.className = 'badge ' + (isConnected ? 'good' : needsQr ? 'warn' : 'neutral');
+    }
+    $('wa-connection-text').textContent = status.replace(/_/g, ' ');
     $('wa-authenticated').textContent = when(whatsapp.authenticatedAt);
     $('wa-ready').textContent = when(whatsapp.readyAt);
     $('wa-issue').textContent = whatsapp.lastError || whatsapp.lastDisconnectReason || 'None';
 
-    // Show pairing code if available from status
-    const pairResult = $('pair-result');
+    // Show pairing code if available from status poll
     if (pairResult && whatsapp.pairingCode) {
         pairResult.style.display = 'block';
-        pairResult.innerHTML = `<div style="text-align:center;padding:1rem;background:var(--bg-section);border-radius:8px;">
+        pairResult.innerHTML = `<div class="pairing-code-display">
             <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.5rem;">
                 <span class="t-en">Enter this code on your phone:</span>
                 <span class="t-ar">أدخل هذا الرمز في هاتفك:</span>
