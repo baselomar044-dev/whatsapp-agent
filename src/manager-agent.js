@@ -16,6 +16,7 @@ const {
     setManagerStatus
 } = require('./runtime-state');
 const { isBlastRunning, reconfigureScheduler, runDailyBlast } = require('./scheduler');
+const { requestDeletion, approveDeletion, rejectDeletion, getPendingDeletions, buildDeletionConfirmationPrompt } = require('./deletion-manager');
 
 const groqClient = appConfig.manager.groqApiKey
     ? new Groq({ apiKey: appConfig.manager.groqApiKey })
@@ -95,6 +96,13 @@ function buildHelpText() {
         '- sendfile 9715XXXXXXXX | optional caption',
         '- file to 9715XXXXXXXX | optional caption',
         '- voice 9715XXXXXXXX | optional caption  (uses uploaded voice/file)',
+        '',
+        '🗑️ DELETION COMMANDS (Basel Authorization Required):',
+        '- delete conversation 9715XXXXXXXX | احذف المحادثة',
+        '- delete chat 9715XXXXXXXX',
+        '- pending | list pending deletions',
+        '- approve ID | ✅ confirm deletion',
+        '- reject ID | ❌ cancel deletion',
         '',
         'Attach a file or record a voice note in the chat box, then use sendfile/file/voice to deliver it.',
         'ارفع ملفاً أو سجل voice note من صندوق المحادثة ثم استخدم أوامر file أو voice لإرسالها.',
@@ -187,6 +195,38 @@ function parseCommand(text) {
 
     if (/^\/?blast(?:\s+now)?$/i.test(value)) {
         return { name: 'blast_now' };
+    }
+
+    // Delete commands
+    const deleteConvMatch = value.match(/^\/?(?:delete|del|rm)\s+(?:chat|conversation|conv)\s+([+\d][\d\s()-]+)$/i);
+    if (deleteConvMatch) {
+        return {
+            name: 'delete_conversation',
+            phone: deleteConvMatch[1].trim()
+        };
+    }
+
+    // List pending deletions
+    if (/^\/?(?:pending|deletions|deletes)$/i.test(value)) {
+        return { name: 'list_deletions' };
+    }
+
+    // Approve/confirm deletion
+    const approveMatch = value.match(/^\/?(?:approve|confirm|yes)\s+([a-zA-Z0-9_]+)$/i);
+    if (approveMatch) {
+        return {
+            name: 'approve_deletion',
+            deletionId: approveMatch[1].trim()
+        };
+    }
+
+    // Reject deletion
+    const rejectMatch = value.match(/^\/?(?:reject|cancel|no)\s+([a-zA-Z0-9_]+)$/i);
+    if (rejectMatch) {
+        return {
+            name: 'reject_deletion',
+            deletionId: rejectMatch[1].trim()
+        };
     }
 
     return { name: 'chat', message: value };
@@ -456,6 +496,49 @@ async function runLocalManagerCommand({
         await sendManagedMedia(command.phone, latestAttachment.absolutePath, command.caption || latestAttachment.caption);
         reply = `File or voice sent to ${normalizePhoneNumber(command.phone)} from ${latestAttachment.relativePath}.`;
         break;
+    
+    // ── Deletion Management ──
+    case 'delete_conversation': {
+        const normalizedPhone = normalizePhoneNumber(command.phone);
+        const delRequest = requestDeletion('conversation', normalizedPhone, 'manager');
+        const confirmPrompt = buildDeletionConfirmationPrompt(delRequest);
+        reply = `${confirmPrompt.ar}\n\n${confirmPrompt.en}\n\n[ID: ${delRequest.id}]`;
+        break;
+    }
+    
+    case 'list_deletions': {
+        const pending = getPendingDeletions();
+        if (!pending.length) {
+            reply = 'No pending deletions. | لا توجد طلبات حذف معلقة.';
+            break;
+        }
+        const list = pending.map((r, i) => 
+            `${i + 1}. ${r.type} (${r.target}) - ID: ${r.id}`
+        ).join('\n');
+        reply = `Pending Deletions:\n${list}\n\nReply with: approve/reject ID`;
+        break;
+    }
+    
+    case 'approve_deletion': {
+        const result = approveDeletion(command.deletionId, 'Basel');
+        if (!result.success) {
+            reply = `Error: ${result.error}`;
+            break;
+        }
+        reply = `✅ Deletion approved: ${result.request.type} (${result.request.target})\n\n⚠️ Will be executed shortly.`;
+        break;
+    }
+    
+    case 'reject_deletion': {
+        const result = rejectDeletion(command.deletionId);
+        if (!result.success) {
+            reply = `Error: ${result.error}`;
+            break;
+        }
+        reply = `❌ Deletion rejected and cancelled.`;
+        break;
+    }
+
     case 'chat':
         reply = await buildAiReply(chatId, command.message, attachmentRecord);
         break;
