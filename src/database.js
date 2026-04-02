@@ -17,6 +17,11 @@ function isMissingTableError(error) {
     return Boolean(error && /could not find the table|relation .* does not exist/i.test(String(error.message || error)));
 }
 
+function logSupabaseFallback(operation, error) {
+    const message = String(error?.message || error || 'unknown error');
+    console.warn(`[database] Supabase ${operation} failed. Falling back to local storage. Reason: ${message}`);
+}
+
 function sortContactsByLastSent(items) {
     return [...items].sort((left, right) => {
         if (!left.last_sent_at && right.last_sent_at) {
@@ -75,9 +80,7 @@ async function getActiveContacts() {
         return data;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('getActiveContacts', error);
 
     return sortContactsByLastSent(getLocalContacts().filter((contact) => contact.is_active !== false));
 }
@@ -92,9 +95,7 @@ async function updateLastSent(phone, sentAt = new Date().toISOString()) {
         return;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('updateLastSent', error);
 
     const contacts = getLocalContacts();
     const nextContacts = contacts.map((contact) => (
@@ -119,9 +120,7 @@ async function logMessage(phone, status, content = '', sentAt = new Date().toISO
         return;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('logMessage', error);
 
     const logs = getLocalLogs();
     logs.unshift({
@@ -146,9 +145,7 @@ async function getDailyReport(date = new Date()) {
         return data;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('getDailyReport', error);
 
     return getLocalLogsInRange(startIso, endIso);
 }
@@ -172,8 +169,8 @@ async function getContactStats() {
         };
     }
 
-    if (totalResult.error && !isMissingTableError(totalResult.error)) throw totalResult.error;
-    if (activeResult.error && !isMissingTableError(activeResult.error)) throw activeResult.error;
+    if (totalResult.error) logSupabaseFallback('getContactStats(total)', totalResult.error);
+    if (activeResult.error) logSupabaseFallback('getContactStats(active)', activeResult.error);
 
     const contacts = getLocalContacts();
     const active = contacts.filter((contact) => contact.is_active !== false).length;
@@ -197,9 +194,7 @@ async function getContacts(limit = 200) {
         return data;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('getContacts', error);
 
     return getLocalContacts()
         .sort((left, right) => String(left.name || '').localeCompare(String(right.name || '')))
@@ -253,9 +248,7 @@ async function upsertContacts(contacts) {
         return payload.length;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('upsertContacts', error);
 
     const existing = getLocalContacts();
     const byPhone = new Map(existing.map((contact) => [contact.phone, contact]));
@@ -283,7 +276,7 @@ async function deleteContact(phone) {
 
     if (!error) return;
 
-    if (!isMissingTableError(error)) throw error;
+    logSupabaseFallback('deleteContact', error);
 
     saveLocalContacts(getLocalContacts().filter((c) => c.phone !== phoneStr));
 }
@@ -299,7 +292,7 @@ async function deleteContacts(phones) {
 
     if (!error) return phoneList.length;
 
-    if (!isMissingTableError(error)) throw error;
+    logSupabaseFallback('deleteContacts', error);
 
     const phoneSet = new Set(phoneList);
     saveLocalContacts(getLocalContacts().filter((c) => !phoneSet.has(c.phone)));
@@ -323,7 +316,7 @@ async function updateContact(phone, updates) {
 
     if (!error) return;
 
-    if (!isMissingTableError(error)) throw error;
+    logSupabaseFallback('updateContact', error);
 
     saveLocalContacts(getLocalContacts().map((c) => (c.phone === phoneStr ? { ...c, ...patch } : c)));
 }
@@ -340,9 +333,7 @@ async function getRecentLogs(limit = 12) {
         return data;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('getRecentLogs', error);
 
     return getLocalLogs().slice(0, safeLimit);
 }
@@ -383,9 +374,7 @@ async function getAppSetting(key, fallbackValue = null) {
         return data?.value ?? fallbackValue;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('getAppSetting', error);
 
     const settings = getLocalSettings();
     return Object.prototype.hasOwnProperty.call(settings, key) ? settings[key] : fallbackValue;
@@ -400,9 +389,7 @@ async function upsertAppSetting(key, value) {
         return;
     }
 
-    if (!isMissingTableError(error)) {
-        throw error;
-    }
+    logSupabaseFallback('upsertAppSetting', error);
 
     const settings = getLocalSettings();
     settings[key] = value;
