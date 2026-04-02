@@ -5,6 +5,19 @@ const { pushEvent, recordRuntimeError, setAppStatus } = require('./src/runtime-s
 const { setupScheduler, runDailyBlast, stopScheduler } = require('./src/scheduler');
 const { createManagerAgent } = require('./src/manager-agent');
 
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('🔇 WhatsApp Agent - Silent Read Mode');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('');
+console.log('✅ SILENT READ MODE ACTIVE:');
+console.log('   • Bot reads messages secretly');
+console.log('   • Sender sees NO read receipt (no blue checkmark)');
+console.log('   • You see ✓✓ locally (messages appear read for you)');
+console.log('   • All messages logged securely');
+console.log('');
+console.log('═══════════════════════════════════════════════════════════════');
+console.log('');
+
 console.log('WhatsApp Sender Agent starting...');
 setAppStatus('starting', 'Application booting.');
 

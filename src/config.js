@@ -23,7 +23,8 @@ const DEFAULTS = {
     managerRecentAttachmentLimit: 10,
     managerAutoSaveIncomingMedia: true,
     managerReplyPrefix: '',
-    groqModel: 'llama-3.3-70b-versatile'
+    groqModel: 'llama-3.3-70b-versatile',
+    stealthMode: false
 };
 
 function requiredString(env, key) {
@@ -159,6 +160,7 @@ function buildConfig(env = process.env) {
         timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         chromeExecutablePath: resolveBrowserExecutablePath(env),
         headless: parseBooleanSetting(env.WHATSAPP_HEADLESS, DEFAULTS.headless),
+        stealthMode: parseBooleanSetting(env.WHATSAPP_STEALTH_MODE, DEFAULTS.stealthMode),
         manager: {
             enabled: parseBooleanSetting(env.MANAGER_ENABLED, DEFAULTS.managerEnabled),
             name: String(env.MANAGER_NAME || DEFAULTS.managerName).trim() || DEFAULTS.managerName,

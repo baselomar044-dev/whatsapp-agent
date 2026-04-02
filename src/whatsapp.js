@@ -113,19 +113,73 @@ client.on('code', (code) => {
 });
 
 // ── Incoming messages from contacts ──────────────────────────────────
+// CRITICAL: Agent reads messages WITHOUT sending read receipt to sender
+// Read Receipts:
+//   - You (Basel): Normal - blue checkmark appears (your WhatsApp setting)
+//   - Sender: Sees message as UNREAD (bot doesn't ack)
 client.on('message', async (msg) => {
     try {
         // Only log messages from individual chats (not groups, not from ourselves)
-        if (msg.from === 'status@broadcast') return;
+        if (msg.isStatus) return;
         if (msg.fromMe) return;
         if (msg.from && msg.from.endsWith('@g.us')) return; // skip groups
 
         const rawPhone = String(msg.from || '').replace('@c.us', '').replace(/[^\d]/g, '');
         if (!rawPhone) return;
 
-        const body = msg.body || (msg.hasMedia ? '[media]' : '[message]');
+        // 🔇 SILENT MODE: Read message data WITHOUT sending acknowledgment
+        // We extract: text, media, timestamps, etc
+        // But we NEVER call msg.ack() - this prevents blue checkmark being sent to sender
+        
+        const messageId = msg.id?._serialized || 'unknown';
+        let body = msg.body || '[message]';
+        let mediaInfo = '';
+
+        // Detect media type (voice, image, video, document, etc)
+        if (msg.hasMedia) {
+            try {
+                const media = await msg.downloadMedia();
+                const mimeType = media.mimetype || 'unknown';
+                const isVoice = mimeType.includes('audio') || mimeType.includes('ogg');
+                const isImage = mimeType.includes('image');
+                const isVideo = mimeType.includes('video');
+                const isDocument = mimeType.includes('application') || mimeType.includes('pdf');
+
+                if (isVoice) {
+                    mediaInfo = `🎙️ VOICE MESSAGE (${mimeType})`;
+                    body = `[🎙️ VOICE] ${msg.body || '(no caption)'}`;
+                } else if (isImage) {
+                    mediaInfo = `🖼️ IMAGE (${mimeType})`;
+                    body = `[🖼️ IMAGE] ${msg.body || '(no caption)'}`;
+                } else if (isVideo) {
+                    mediaInfo = `🎬 VIDEO (${mimeType})`;
+                    body = `[🎬 VIDEO] ${msg.body || '(no caption)'}`;
+                } else if (isDocument) {
+                    mediaInfo = `📄 DOCUMENT (${mimeType})`;
+                    body = `[📄 DOC] ${msg.body || '(no caption)'}`;
+                } else {
+                    mediaInfo = `📎 ATTACHMENT (${mimeType})`;
+                    body = `[📎 FILE] ${msg.body || '(no caption)'}`;
+                }
+            } catch (mediaErr) {
+                mediaInfo = `📎 ATTACHMENT (couldn't extract details)`;
+                body = `[📎 FILE] ${msg.body || '(no caption)'}`;
+            }
+        }
+
+        // Log to database (your logs only)
         await logMessage(rawPhone, 'received', body.slice(0, 500), new Date().toISOString());
-        console.log(`Incoming reply from ${rawPhone}: ${body.slice(0, 80)}`);
+        
+        // Console output for your monitoring - detailed report
+        console.log(`\n${'═'.repeat(70)}`);
+        console.log(`🔇 [SILENT READ] ${messageId}`);
+        console.log(`   From: ${rawPhone}`);
+        if (mediaInfo) {
+            console.log(`   Type: ${mediaInfo}`);
+        }
+        console.log(`   Content: ${body.slice(0, 100)}`);
+        console.log(`   ✓ UNREAD for sender (no blue checkmark sent)`);
+        console.log(`${'═'.repeat(70)}\n`);
     } catch (err) {
         console.error('Failed to log incoming message:', err.message);
     }
