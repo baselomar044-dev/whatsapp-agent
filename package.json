@@ -8,6 +8,7 @@
     "preview": "node index.js --preview",
     "dashboard": "node index.js",
     "blast:now": "node index.js --now",
+    "import:excel": "node import-excel-contacts.js",
     "test": "node --test test/*.test.js"
   },
   "dependencies": {

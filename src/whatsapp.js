@@ -17,11 +17,22 @@ const {
 
 const puppeteerConfig = {
     headless: appConfig.headless,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+    args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--single-process',
+        '--no-first-run',
+        '--no-default-browser-check'
+    ]
 };
 
+// Use system Chrome if available, otherwise use what's in PATH
 if (appConfig.chromeExecutablePath) {
     puppeteerConfig.executablePath = appConfig.chromeExecutablePath;
+} else if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    puppeteerConfig.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
 }
 
 const client = new Client({

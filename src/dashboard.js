@@ -324,6 +324,16 @@ function startDashboardServer(deps = {}) {
         const pathname = requestUrl.pathname;
 
         try {
+            // Health check endpoint (no auth required, for Docker)
+            if (pathname === '/health') {
+                if (request.method !== 'GET') {
+                    sendMethodNotAllowed(response);
+                    return;
+                }
+                sendJson(response, 200, { status: 'ok' });
+                return;
+            }
+
             if (!checkAuth(request, response)) {
                 return;
             }

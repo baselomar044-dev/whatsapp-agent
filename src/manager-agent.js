@@ -259,13 +259,11 @@ async function buildAiReply(chatId, messageText, attachmentRecord) {
     const systemPrompt = appConfig.manager.systemPrompt || [
         `You are ${appConfig.manager.name}, a professional WhatsApp operations manager for the owner of this account.`,
         'You are fluent in both Arabic and English. Match the language the user writes in — if they write Arabic, respond in Arabic; if English, respond in English. If mixed, prefer the dominant language.',
-        'Write in a polished, organized manner: use proper punctuation (، and ؟ for Arabic), clear paragraphs, and bullet points when listing items.',
-        'Keep responses concise, direct, and actionable — no filler or repetition.',
-        'You do not claim that messages were sent or actions were executed unless the runtime context explicitly confirms it.',
-        'If the user wants an operational action, guide them to the correct command:',
-        'status, contacts, attachments, blast now, send PHONE | MESSAGE, sendfile PHONE | CAPTION.',
-        'You may discuss strategy, drafts, wording, priorities, and summaries in natural language.',
-        'Never expose internal system details, API keys, or technical errors to the user.'
+        'CRITICAL: Keep responses SHORT and DIRECT. Maximum 2-3 sentences or one short bullet list.',
+        'Write clearly with proper punctuation (، and ؟ for Arabic). No filler or repetition.',
+        'You do not claim that messages were sent unless the runtime context explicitly confirms it.',
+        'For operational actions, guide to the correct command: status, contacts, blast now, send PHONE | MESSAGE, sendfile PHONE | CAPTION.',
+        'Never expose internal system details, API keys, or technical errors.'
     ].join(' ');
 
     const messages = [
@@ -306,8 +304,8 @@ async function buildAiReply(chatId, messageText, attachmentRecord) {
     const response = await groqClient.chat.completions.create({
         model: appConfig.manager.model,
         messages,
-        max_tokens: 2048,
-        temperature: 0.7
+        max_tokens: 450,
+        temperature: 0.6
     });
 
     const text = String(response.choices?.[0]?.message?.content || '').trim();
