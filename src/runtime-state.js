@@ -10,6 +10,8 @@ const state = {
         status: 'initializing',
         qrUrl: null,
         qrUpdatedAt: null,
+        pairingCode: null,
+        pairingCodeAt: null,
         authenticatedAt: null,
         readyAt: null,
         lastError: null,
@@ -119,10 +121,18 @@ function setWhatsAppQr(qr) {
     return 'generating...';
 }
 
+function setPairingCode(code) {
+    state.whatsapp.pairingCode = code;
+    state.whatsapp.pairingCodeAt = nowIso();
+    pushEvent('whatsapp', `Pairing code generated: ${code}. Enter it on your phone.`);
+}
+
 function markWhatsAppAuthenticated() {
     state.whatsapp.status = 'authenticated';
     state.whatsapp.qrUrl = null;
     state.whatsapp.qrUpdatedAt = null;
+    state.whatsapp.pairingCode = null;
+    state.whatsapp.pairingCodeAt = null;
     state.whatsapp.authenticatedAt = nowIso();
     state.whatsapp.lastError = null;
     pushEvent('whatsapp', 'WhatsApp session authenticated.');
@@ -132,6 +142,8 @@ function markWhatsAppReady() {
     state.whatsapp.status = 'ready';
     state.whatsapp.qrUrl = null;
     state.whatsapp.qrUpdatedAt = null;
+    state.whatsapp.pairingCode = null;
+    state.whatsapp.pairingCodeAt = null;
     state.whatsapp.readyAt = nowIso();
     state.whatsapp.lastError = null;
     pushEvent('whatsapp', 'WhatsApp client is ready.');
@@ -284,6 +296,7 @@ module.exports = {
     setAppStatus,
     setManagerStatus,
     setSchedulerState,
+    setPairingCode,
     setWhatsAppQr,
     startBlast,
     finishBlast,

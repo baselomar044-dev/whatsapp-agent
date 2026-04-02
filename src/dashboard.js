@@ -317,7 +317,7 @@ async function buildStatusPayload() {
 }
 
 function startDashboardServer(deps = {}) {
-    const { client, sendManagedMessage, sendManagedMedia } = deps;
+    const { client, requestPairing, sendManagedMessage, sendManagedMedia } = deps;
 
     const server = http.createServer(async (request, response) => {
         const requestUrl = new URL(request.url || '/', `http://${request.headers.host || `${appConfig.dashboardHost}:${appConfig.dashboardPort}`}`);
@@ -391,6 +391,29 @@ function startDashboardServer(deps = {}) {
 
                 const payload = await buildStatusPayload();
                 sendJson(response, 200, payload.health);
+                return;
+            }
+
+            if (pathname === '/api/whatsapp/pair') {
+                if (request.method !== 'POST') {
+                    sendMethodNotAllowed(response);
+                    return;
+                }
+
+                const body = await readJsonBody(request);
+                const phoneNumber = (body.phoneNumber || '').replace(/[^0-9]/g, '');
+                if (!phoneNumber || phoneNumber.length < 7) {
+                    sendJson(response, 400, { error: 'A valid phone number is required (digits only, with country code).' });
+                    return;
+                }
+
+                if (!requestPairing) {
+                    sendJson(response, 500, { error: 'Pairing not available.' });
+                    return;
+                }
+
+                const result = await requestPairing(phoneNumber);
+                sendJson(response, result.success ? 200 : 500, result);
                 return;
             }
 

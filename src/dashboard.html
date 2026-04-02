@@ -137,6 +137,25 @@
                                     </div>
                                 </div>
                             </div>
+                            <!-- Pairing Code Section -->
+                            <div class="pairing-section" style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);">
+                                <h4 style="margin:0 0 0.5rem;">
+                                    <span class="t-en">Link with Phone Number</span>
+                                    <span class="t-ar">ربط برقم الهاتف</span>
+                                </h4>
+                                <p style="font-size:0.8rem;color:var(--text-secondary);margin:0 0 0.5rem;">
+                                    <span class="t-en">Can't scan QR? Enter your phone number with country code (e.g. 966512345678)</span>
+                                    <span class="t-ar">لا تستطيع مسح QR؟ أدخل رقم هاتفك مع رمز الدولة (مثال: 966512345678)</span>
+                                </p>
+                                <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                                    <input id="pair-phone" type="tel" placeholder="966512345678" style="flex:1;min-width:160px;padding:0.5rem;border:1px solid var(--border);border-radius:6px;font-size:0.95rem;background:var(--bg-card);color:var(--text-primary);" />
+                                    <button id="pair-btn" class="btn btn-primary" style="white-space:nowrap;">
+                                        <span class="t-en">Get Pairing Code</span>
+                                        <span class="t-ar">احصل على رمز الربط</span>
+                                    </button>
+                                </div>
+                                <div id="pair-result" style="margin-top:0.75rem;display:none;"></div>
+                            </div>
                         </article>
 
                         <article class="info-panel sub-panel">

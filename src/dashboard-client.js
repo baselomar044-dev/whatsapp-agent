@@ -146,7 +146,81 @@ function renderQr(whatsapp) {
     $('wa-authenticated').textContent = when(whatsapp.authenticatedAt);
     $('wa-ready').textContent = when(whatsapp.readyAt);
     $('wa-issue').textContent = whatsapp.lastError || whatsapp.lastDisconnectReason || 'None';
+
+    // Show pairing code if available from status
+    const pairResult = $('pair-result');
+    if (pairResult && whatsapp.pairingCode) {
+        pairResult.style.display = 'block';
+        pairResult.innerHTML = `<div style="text-align:center;padding:1rem;background:var(--bg-section);border-radius:8px;">
+            <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+                <span class="t-en">Enter this code on your phone:</span>
+                <span class="t-ar">أدخل هذا الرمز في هاتفك:</span>
+            </div>
+            <div style="font-size:2rem;font-weight:700;letter-spacing:0.3em;font-family:monospace;color:var(--accent);">${esc(whatsapp.pairingCode)}</div>
+            <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.5rem;">
+                <span class="t-en">WhatsApp → Linked Devices → Link a Device → Link with Phone Number</span>
+                <span class="t-ar">واتساب ← الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف</span>
+            </div>
+        </div>`;
+    }
 }
+
+// ── Pairing code request ──────────────────────────────────────────────
+(function initPairing() {
+    const btn = $('pair-btn');
+    const input = $('pair-phone');
+    const resultDiv = $('pair-result');
+    if (!btn || !input) return;
+
+    btn.addEventListener('click', async () => {
+        const phone = input.value.replace(/[^0-9]/g, '');
+        if (!phone || phone.length < 7) {
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `<div style="color:var(--error);font-size:0.85rem;">
+                <span class="t-en">Please enter a valid phone number with country code.</span>
+                <span class="t-ar">يرجى إدخال رقم هاتف صحيح مع رمز الدولة.</span>
+            </div>`;
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '...';
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = `<div style="color:var(--text-secondary);font-size:0.85rem;">
+            <span class="t-en">Requesting pairing code...</span>
+            <span class="t-ar">جاري طلب رمز الربط...</span>
+        </div>`;
+
+        try {
+            const res = await fetch('/api/whatsapp/pair', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', ...(window.__authHeader ? { Authorization: window.__authHeader } : {}) },
+                body: JSON.stringify({ phoneNumber: phone })
+            });
+            const data = await res.json();
+            if (data.success && data.code) {
+                resultDiv.innerHTML = `<div style="text-align:center;padding:1rem;background:var(--bg-section);border-radius:8px;">
+                    <div style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.5rem;">
+                        <span class="t-en">Enter this code on your phone:</span>
+                        <span class="t-ar">أدخل هذا الرمز في هاتفك:</span>
+                    </div>
+                    <div style="font-size:2rem;font-weight:700;letter-spacing:0.3em;font-family:monospace;color:var(--accent);">${esc(data.code)}</div>
+                    <div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.5rem;">
+                        <span class="t-en">WhatsApp → Linked Devices → Link a Device → Link with Phone Number</span>
+                        <span class="t-ar">واتساب ← الأجهزة المرتبطة ← ربط جهاز ← الربط برقم الهاتف</span>
+                    </div>
+                </div>`;
+            } else {
+                resultDiv.innerHTML = `<div style="color:var(--error);font-size:0.85rem;">${esc(data.error || 'Failed to get pairing code.')}</div>`;
+            }
+        } catch (err) {
+            resultDiv.innerHTML = `<div style="color:var(--error);font-size:0.85rem;">${esc(err.message)}</div>`;
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<span class="t-en">Get Pairing Code</span><span class="t-ar">احصل على رمز الربط</span>';
+        }
+    });
+})();
 
 // ── Sent list render ───────────────────────────────────────────────────
 function renderSent(logs) {

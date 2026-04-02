@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { client, sendManagedMessage, sendManagedMedia } = require('./src/whatsapp');
+const { client, requestPairing, sendManagedMessage, sendManagedMedia } = require('./src/whatsapp');
 const { startDashboardServer } = require('./src/dashboard');
 const { pushEvent, recordRuntimeError, setAppStatus } = require('./src/runtime-state');
 const { setupScheduler, runDailyBlast, stopScheduler } = require('./src/scheduler');
@@ -10,6 +10,7 @@ setAppStatus('starting', 'Application booting.');
 
 const dashboardServer = startDashboardServer({
     client,
+    requestPairing,
     sendManagedMessage,
     sendManagedMedia
 });

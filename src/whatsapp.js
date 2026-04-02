@@ -11,6 +11,7 @@ const {
     markWhatsAppDisconnected,
     markWhatsAppReady,
     recordMessageResult,
+    setPairingCode,
     setWhatsAppQr
 } = require('./runtime-state');
 
@@ -93,6 +94,25 @@ client.on('disconnected', (reason) => {
     console.warn('WhatsApp disconnected:', reason);
 });
 
+// Pairing code event (emitted when requestPairingCode is used)
+client.on('code', (code) => {
+    setPairingCode(code);
+    console.log(`--- PAIRING CODE: ${code} ---`);
+    console.log('Enter this code on your phone: WhatsApp > Linked Devices > Link a Device > Link with Phone Number');
+});
+
+async function requestPairing(phoneNumber) {
+    try {
+        const code = await client.requestPairingCode(phoneNumber, true);
+        setPairingCode(code);
+        console.log(`Pairing code for ${phoneNumber}: ${code}`);
+        return { success: true, code };
+    } catch (error) {
+        console.error('Failed to request pairing code:', error);
+        return { success: false, error: error.message };
+    }
+}
+
 async function sendToPhone(phoneNumber, content, options = {}) {
     const normalizedPhone = normalizePhoneNumber(phoneNumber);
     const sentAt = new Date().toISOString();
@@ -167,6 +187,7 @@ async function sendManagedMedia(phoneNumber, filePath, caption = '') {
 
 module.exports = {
     client,
+    requestPairing,
     sendManagedMedia,
     sendManagedMessage,
     sendMessage
