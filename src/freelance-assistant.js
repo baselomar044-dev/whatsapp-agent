@@ -4,17 +4,10 @@ const Groq = require('groq-sdk');
 
 const { appendChatHistory, getChatHistory, getLatestAttachmentForChat } = require('./manager-storage');
 const { getFreelanceDashboardData, triggerFreelanceManualSearch, upsertFreelanceSettings } = require('./freelance-bridge');
-
-const freelanceEnvPath = path.resolve(process.cwd(), '..', 'freelance-agent', '.env');
+const { appConfig } = require('./config');
 
 function getFreelanceGroqClient() {
-    if (!fs.existsSync(freelanceEnvPath)) {
-        return null;
-    }
-
-    const dotenv = require('dotenv');
-    const env = dotenv.parse(fs.readFileSync(freelanceEnvPath, 'utf8'));
-    const apiKey = String(env.GROQ_API_KEY || '').trim();
+    const apiKey = appConfig.manager.groqApiKey || String(process.env.GROQ_API_KEY || '').trim();
 
     if (!apiKey) {
         return null;
@@ -214,7 +207,7 @@ async function buildFreelanceAiReply(chatId, messageText) {
     messages.push({ role: 'user', content: messageText });
 
     const response = await client.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: appConfig.manager.model || 'llama-3.3-70b-versatile',
         messages,
         max_tokens: 2048,
         temperature: 0.7

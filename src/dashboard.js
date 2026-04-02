@@ -423,11 +423,6 @@ function startDashboardServer(deps = {}) {
                     return;
                 }
 
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Manual blast control is limited to local requests.' });
-                    return;
-                }
-
                 if (isBlastRunning()) {
                     sendJson(response, 409, { error: 'A blast is already running.' });
                     return;
@@ -452,11 +447,6 @@ function startDashboardServer(deps = {}) {
                     return;
                 }
 
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Contact import is limited to local requests.' });
-                    return;
-                }
-
                 const body = await readJsonBody(request);
                 const imported = await upsertContacts(body.contacts || []);
                 sendJson(response, 200, { imported, message: `Imported ${imported} contacts.` });
@@ -466,11 +456,6 @@ function startDashboardServer(deps = {}) {
             if (pathname === '/api/contacts/delete') {
                 if (request.method !== 'POST') {
                     sendMethodNotAllowed(response);
-                    return;
-                }
-
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Contact deletion is limited to local requests.' });
                     return;
                 }
 
@@ -490,11 +475,6 @@ function startDashboardServer(deps = {}) {
             if (pathname === '/api/contacts/update') {
                 if (request.method !== 'POST') {
                     sendMethodNotAllowed(response);
-                    return;
-                }
-
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Contact updates are limited to local requests.' });
                     return;
                 }
 
@@ -552,11 +532,6 @@ function startDashboardServer(deps = {}) {
                     return;
                 }
 
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Direct send is limited to local requests.' });
-                    return;
-                }
-
                 if (!sendManagedMessage) {
                     sendJson(response, 503, { error: 'WhatsApp client not available.' });
                     return;
@@ -590,11 +565,6 @@ function startDashboardServer(deps = {}) {
                     return;
                 }
 
-                if (!isLocalRequest(request)) {
-                    sendJson(response, 403, { error: 'Automation updates are limited to local requests.' });
-                    return;
-                }
-
                 const body = await readJsonBody(request);
                 await Promise.all([
                     upsertAppSetting('blaster_message', String(body.messageTemplate || '').trim()),
@@ -611,7 +581,6 @@ function startDashboardServer(deps = {}) {
 
             if (pathname === '/api/manager/clear') {
                 if (request.method !== 'POST') { sendMethodNotAllowed(response); return; }
-                if (!isLocalRequest(request)) { sendJson(response, 403, { error: 'Restricted to local.' }); return; }
                 clearChatHistory('dashboard-whatsapp');
                 sendJson(response, 200, { cleared: true });
                 return;
@@ -619,7 +588,6 @@ function startDashboardServer(deps = {}) {
 
             if (pathname === '/api/freelance/clear') {
                 if (request.method !== 'POST') { sendMethodNotAllowed(response); return; }
-                if (!isLocalRequest(request)) { sendJson(response, 403, { error: 'Restricted to local.' }); return; }
                 clearChatHistory('dashboard-freelance');
                 sendJson(response, 200, { cleared: true });
                 return;
